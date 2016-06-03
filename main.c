@@ -4,9 +4,12 @@
 int main() {
         char *line = NULL;
         size_t size;
+        ssize_t len;
         while(true) {
-                if (getline(&line, &size, stdin) == -1) {
+                len = getline(&line, &size, stdin);
+                if (len == -1) {
                         printf("No line");
+                        break;
                 } else {
                         printf("%s\n", line);
                 }
