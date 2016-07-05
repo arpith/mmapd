@@ -10,12 +10,12 @@ import (
 	"golang.org/x/exp/mmap"
 )
 
-func setHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Setting %s!", r.URL.Path[1:])
+func setHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Fprintf(w, "Setting %s!", ps.ByName("key"))
 }
 
-func getHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Getting %s!", r.URL.Path[1:])
+func getHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Fprintf(w, "Getting %s!", ps.ByName("key"))
 }
 
 func main() {
@@ -33,8 +33,8 @@ func main() {
 	fmt.Printf("Length of memory mapped db file is: %d", len)
 
 	router := httprouter.New()
-	router.HandlerFunc("POST", "/set/:key", setHandler)
-	router.HandlerFunc("GET", "/get/:key", getHandler)
+	router.POST("/set/:key", setHandler)
+	router.GET("/get/:key", getHandler)
 
 	port := strings.TrimSpace(os.Getenv("PORT"))
 	if port == "" {
