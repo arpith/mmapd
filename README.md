@@ -1,5 +1,5 @@
 # mmapd
-Distributed mmap
+In memory datastore written in Go that uses mmap for persistence.
 
 ## Usage
 ### Set a value
