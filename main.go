@@ -29,7 +29,6 @@ func (db *db) resize(size int) {
 	if err != nil {
 		fmt.Println("Error extending the db file: ", err)
 	}
-	db.remap(size)
 }
 
 func (db *db) set(key string, value string) {
