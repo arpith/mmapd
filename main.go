@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
@@ -10,24 +11,32 @@ import (
 )
 
 type db struct {
-	data []byte
+	data    []byte
+	dataMap map[string]string
 }
 
 func (db *db) set(key string, value string) {
 	fmt.Println("DB before modification: ", string(db.data))
-	s := key + ": " + value
-	b := []byte(s)
-	for i := 0; i < len(b); i++ {
-		db.data[i] = b[i]
+	db.dataMap[key] = value
+	b, err := json.Marshal(db.dataMap)
+	if err != nil {
+		fmt.Println("Error marshalling db: ", err)
 	}
+	fmt.Printf("previous data size: %d\nneeded size: %d\n", len(db.data), len(b))
+	copy(db.data, b)
 	fmt.Println("DB after modification: ", string(db.data))
+}
+
+func (db *db) get(key string) string {
+	return db.dataMap[key]
 }
 
 func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch r.Method {
 	case "GET":
-		fmt.Print(ps.ByName("key"))
-		fmt.Fprintf(w, "Getting %s!", ps.ByName("key"))
+		key := ps.ByName("key")
+		fmt.Printf("Getting %s!\n", key)
+		fmt.Fprintln(w, db.get(key))
 	case "POST":
 		db.set(ps.ByName("key"), r.FormValue("value"))
 	}
@@ -49,12 +58,23 @@ func openDB() *db {
 		fmt.Println("Could not open file: ", err)
 	}
 
-	data, err := syscall.Mmap(int(f.Fd()), 0, 100, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+	fi, err := os.Stat(filename)
+	if err != nil {
+		fmt.Println("Could not stat file: ", err)
+	}
+
+	data, err := syscall.Mmap(int(f.Fd()), 0, int(fi.Size()), syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		fmt.Printf("Could not memory map the file (into a byte array): ", err)
 	}
 
-	m := &db{data}
+	var dataMap map[string]string
+	err = json.Unmarshal(data, &dataMap)
+	if err != nil {
+		fmt.Println("Error unmarshalling initial data into map: ", err)
+	}
+
+	m := &db{data, dataMap}
 	return m
 }
 
