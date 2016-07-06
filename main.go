@@ -13,6 +13,23 @@ import (
 type db struct {
 	data    []byte
 	dataMap map[string]string
+	fd      int
+}
+
+func (db *db) remap(size int) {
+	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+	if err != nil {
+		fmt.Printf("Could not mmap the file into memory: ", err)
+	}
+	db.data = data
+}
+
+func (db *db) resize(size int) {
+	err := syscall.Ftruncate(db.fd, int64(size))
+	if err != nil {
+		fmt.Println("Error extending the db file: ", err)
+	}
+	db.remap(size)
 }
 
 func (db *db) set(key string, value string) {
@@ -22,7 +39,10 @@ func (db *db) set(key string, value string) {
 	if err != nil {
 		fmt.Println("Error marshalling db: ", err)
 	}
-	fmt.Printf("previous data size: %d\nneeded size: %d\n", len(db.data), len(b))
+	if len(b) > len(db.data) {
+		db.resize(len(b))
+		db.remap(len(b))
+	}
 	copy(db.data, b)
 	fmt.Println("DB after modification: ", string(db.data))
 }
@@ -74,7 +94,7 @@ func openDB() *db {
 		fmt.Println("Error unmarshalling initial data into map: ", err)
 	}
 
-	m := &db{data, dataMap}
+	m := &db{data, dataMap, int(f.Fd())}
 	return m
 }
 
