@@ -9,7 +9,7 @@ import (
 )
 
 func TestConcurrency(t *testing.T) {
-	for i := 0; i < 146; i++ {
+	for i := 0; i < 200; i++ {
 		s := strconv.Itoa(i)
 		fmt.Println("Setting", s)
 		_, err := http.PostForm("http://localhost:3001/set/"+s, url.Values{"value": {s}})

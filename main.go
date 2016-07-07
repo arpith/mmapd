@@ -11,58 +11,46 @@ import (
 )
 
 type db struct {
-	data    []byte
-	dataMap map[string]string
-	fd      int
+	data      []byte
+	dataMap   map[string]string
+	fd        int
+	writeChan chan map[string]string
 }
 
-func (db *db) remap(size int) error {
-	fmt.Println("Remapping: ", size)
-	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+func (db *db) remap(size int) {
+	fmt.Println("Remapping: ", size*2)
+	data, err := syscall.Mmap(db.fd, 0, size*2, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		fmt.Println("Error remapping: ", err)
-		return err
 	}
 	db.data = data
-	return nil
 }
 
-func (db *db) resize(size int) error {
-	fi, err := os.Stat("db")
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(fi)
-	fmt.Println("Resizing: ", size)
-	err = syscall.Ftruncate(db.fd, int64(size))
+func (db *db) resize(size int) {
+	fmt.Println("Resizing: ", size*2)
+	err := syscall.Ftruncate(db.fd, int64(size*2))
 	if err != nil {
 		fmt.Println("Error resizing: ", err)
-		return err
 	}
-	return nil
 }
 
-func (db *db) set(key string, value string) error {
-	fmt.Println("DB before modification: ", string(db.data))
-	db.dataMap[key] = value
-	b, err := json.Marshal(db.dataMap)
-	if err != nil {
-		fmt.Println("Error marshalling db: ", err)
-	}
-	if len(b) > len(db.data) {
-		fmt.Println("Going to resize db")
-		err := db.resize(len(b))
+func (db *db) writer() {
+	for {
+		req := <-db.writeChan
+		fmt.Println("DB before modification: ", string(db.data))
+		db.dataMap[req["key"]] = req["value"]
+		b, err := json.Marshal(db.dataMap)
 		if err != nil {
-			return err
+			fmt.Println("Error marshalling db: ", err)
 		}
-		err = db.remap(len(b))
-		if err != nil {
-			return err
+		if len(b) > len(db.data) {
+			fmt.Println("Need to resize!")
+			db.resize(len(b))
+			db.remap(len(b))
 		}
+		copy(db.data, b)
+		fmt.Println("DB after modification: ", string(db.data))
 	}
-	copy(db.data, b)
-	fmt.Println("DB after modification: ", string(db.data))
-	return nil
 }
 
 func (db *db) get(key string) string {
@@ -76,12 +64,13 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		fmt.Printf("Getting %s!\n", key)
 		fmt.Fprintln(w, db.get(key))
 	case "POST":
-		err := db.set(ps.ByName("key"), r.FormValue("value"))
-		if err != nil {
-			fmt.Fprintln(w, err)
-		} else {
-			fmt.Fprintln(w, r.FormValue("value"))
-		}
+		fmt.Println("Got request")
+		m := make(map[string]string)
+		m["key"] = ps.ByName("key")
+		m["value"] = r.FormValue("value")
+		fmt.Println(m)
+		db.writeChan <- m
+		fmt.Fprintln(w, r.FormValue("value"))
 	}
 }
 
@@ -114,7 +103,9 @@ func openDB() *db {
 		fmt.Println("Error unmarshalling initial data into map: ", err)
 	}
 
-	m := &db{data, dataMap, int(f.Fd())}
+	writeChan := make(chan map[string]string)
+	m := &db{data, dataMap, int(f.Fd()), writeChan}
+	go m.writer()
 	return m
 }
 
