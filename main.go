@@ -16,22 +16,33 @@ type db struct {
 	fd      int
 }
 
-func (db *db) remap(size int) {
+func (db *db) remap(size int) error {
+	fmt.Println("Remapping: ", size)
 	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
-		fmt.Printf("Could not mmap the file into memory: ", err)
+		fmt.Println("Error remapping: ", err)
+		return err
 	}
 	db.data = data
+	return nil
 }
 
-func (db *db) resize(size int) {
-	err := syscall.Ftruncate(db.fd, int64(size))
+func (db *db) resize(size int) error {
+	fi, err := os.Stat("db")
 	if err != nil {
-		fmt.Println("Error extending the db file: ", err)
+		fmt.Println(err)
 	}
+	fmt.Println(fi)
+	fmt.Println("Resizing: ", size)
+	err = syscall.Ftruncate(db.fd, int64(size))
+	if err != nil {
+		fmt.Println("Error resizing: ", err)
+		return err
+	}
+	return nil
 }
 
-func (db *db) set(key string, value string) {
+func (db *db) set(key string, value string) error {
 	fmt.Println("DB before modification: ", string(db.data))
 	db.dataMap[key] = value
 	b, err := json.Marshal(db.dataMap)
@@ -39,11 +50,19 @@ func (db *db) set(key string, value string) {
 		fmt.Println("Error marshalling db: ", err)
 	}
 	if len(b) > len(db.data) {
-		db.resize(len(b))
-		db.remap(len(b))
+		fmt.Println("Going to resize db")
+		err := db.resize(len(b))
+		if err != nil {
+			return err
+		}
+		err = db.remap(len(b))
+		if err != nil {
+			return err
+		}
 	}
 	copy(db.data, b)
 	fmt.Println("DB after modification: ", string(db.data))
+	return nil
 }
 
 func (db *db) get(key string) string {
@@ -57,7 +76,12 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		fmt.Printf("Getting %s!\n", key)
 		fmt.Fprintln(w, db.get(key))
 	case "POST":
-		db.set(ps.ByName("key"), r.FormValue("value"))
+		err := db.set(ps.ByName("key"), r.FormValue("value"))
+		if err != nil {
+			fmt.Fprintln(w, err)
+		} else {
+			fmt.Fprintln(w, r.FormValue("value"))
+		}
 	}
 }
 
@@ -68,11 +92,7 @@ func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprout
 func openDB() *db {
 	filename := "db"
 
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		os.Create("db")
-	}
-
-	f, err := os.OpenFile(filename, os.O_RDWR, 0)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0)
 	if err != nil {
 		fmt.Println("Could not open file: ", err)
 	}
@@ -88,6 +108,7 @@ func openDB() *db {
 	}
 
 	var dataMap map[string]string
+
 	err = json.Unmarshal(data, &dataMap)
 	if err != nil {
 		fmt.Println("Error unmarshalling initial data into map: ", err)
