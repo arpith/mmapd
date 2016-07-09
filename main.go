@@ -14,47 +14,69 @@ type db struct {
 	data      []byte
 	dataMap   map[string]string
 	fd        int
+	filename  string
+	file      *os.File
 	writeChan chan map[string]string
 }
 
-func (db *db) remap(size int) {
-	fmt.Println("Remapping: ", size*2)
-	data, err := syscall.Mmap(db.fd, 0, size*2, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+func (db *db) load() {
+	err := json.Unmarshal(db.data, &db.dataMap)
 	if err != nil {
-		fmt.Println("Error remapping: ", err)
+		fmt.Println("Error unmarshalling initial data into map: ", err)
+	}
+	fmt.Println(db.dataMap)
+}
+
+func (db *db) mmap(size int) {
+	fmt.Println("mmapping: ", size)
+	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+	if err != nil {
+		fmt.Println("Error mmapping: ", err)
 	}
 	db.data = data
 }
 
 func (db *db) resize(size int) {
-	fmt.Println("Resizing: ", size*2)
-	err := syscall.Ftruncate(db.fd, int64(size*2))
+	fmt.Println("Resizing: ", size)
+	err := syscall.Ftruncate(db.fd, int64(size))
 	if err != nil {
 		fmt.Println("Error resizing: ", err)
 	}
 }
 
+func (db *db) open() {
+	fmt.Println("Getting file descriptor")
+	f, err := os.OpenFile(db.filename, os.O_CREATE|os.O_RDWR, 0)
+	if err != nil {
+		fmt.Println("Could not open file: ", err)
+	}
+	db.fd = int(f.Fd())
+	db.file = f
+}
+
+func (db *db) extend(size int) {
+	db.file.Close()
+	db.open()
+	db.resize(size)
+	db.mmap(size)
+}
+
 func (db *db) writer() {
 	for {
 		req := <-db.writeChan
-		fmt.Println("DB before modification: ", string(db.data))
+		fmt.Println(req)
+		fmt.Println("Going to modify DB!")
 		db.dataMap[req["key"]] = req["value"]
 		b, err := json.Marshal(db.dataMap)
 		if err != nil {
 			fmt.Println("Error marshalling db: ", err)
 		}
 		if len(b) > len(db.data) {
-			fmt.Println("Need to resize!")
-			db.resize(len(b))
-			db.remap(len(b))
+			db.extend(len(b))
 		}
 		copy(db.data, b)
-		fmt.Println("DB after modification: ", string(db.data))
+		fmt.Println("DB modified!")
 	}
-}
-
-func (db *db) get(key string) string {
-	return db.dataMap[key]
 }
 
 func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -62,14 +84,15 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	case "GET":
 		key := ps.ByName("key")
 		fmt.Printf("Getting %s!\n", key)
-		fmt.Fprintln(w, db.get(key))
+		value := db.dataMap[key]
+		fmt.Fprintln(w, value)
 	case "POST":
 		fmt.Println("Got request")
 		m := make(map[string]string)
 		m["key"] = ps.ByName("key")
 		m["value"] = r.FormValue("value")
 		fmt.Println(m)
-		db.writeChan <- m
+		//db.writeChan <- m
 		fmt.Fprintln(w, r.FormValue("value"))
 	}
 }
@@ -78,41 +101,29 @@ func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprout
 	return db.handler
 }
 
-func openDB() *db {
-	filename := "db"
-
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0)
-	if err != nil {
-		fmt.Println("Could not open file: ", err)
-	}
-
-	fi, err := os.Stat(filename)
+func openDB(filename string) *db {
+	writeChan := make(chan map[string]string, 250)
+	dataMap := make(map[string]string)
+	var data []byte
+	var fd int
+	var file *os.File
+	db := &db{data, dataMap, fd, filename, file, writeChan}
+	db.open()
+	f, err := os.Stat(filename)
 	if err != nil {
 		fmt.Println("Could not stat file: ", err)
 	}
 
-	data, err := syscall.Mmap(int(f.Fd()), 0, int(fi.Size()), syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
-	if err != nil {
-		fmt.Printf("Could not memory map the file (into a byte array): ", err)
-	}
-
-	var dataMap map[string]string
-
-	err = json.Unmarshal(data, &dataMap)
-	if err != nil {
-		fmt.Println("Error unmarshalling initial data into map: ", err)
-	}
-
-	writeChan := make(chan map[string]string)
-	m := &db{data, dataMap, int(f.Fd()), writeChan}
-	go m.writer()
-	return m
+	db.mmap(int(f.Size()))
+	db.load()
+	go db.writer()
+	return db
 }
 
 func main() {
-
-	m := openDB()
-	handler := NewHandler(m)
+	filename := "db"
+	db := openDB(filename)
+	handler := NewHandler(db)
 
 	router := httprouter.New()
 	router.GET("/get/:key", handler)
