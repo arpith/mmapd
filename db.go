@@ -63,8 +63,6 @@ func (db *db) extend(size int) {
 func (db *db) writer() {
 	for {
 		req := <-db.writeChan
-		fmt.Println(req)
-		fmt.Println("Going to modify DB!")
 		db.dataMap[req["key"]] = req["value"]
 		b, err := json.Marshal(db.dataMap)
 		if err != nil {
@@ -74,7 +72,6 @@ func (db *db) writer() {
 			db.extend(len(b))
 		}
 		copy(db.data, b)
-		fmt.Println("DB modified!")
 	}
 }
 
@@ -82,15 +79,12 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	switch r.Method {
 	case "GET":
 		key := ps.ByName("key")
-		fmt.Printf("Getting %s!\n", key)
 		value := db.dataMap[key]
 		fmt.Fprintln(w, value)
 	case "POST":
-		fmt.Println("Got request")
 		m := make(map[string]string)
 		m["key"] = ps.ByName("key")
 		m["value"] = r.FormValue("value")
-		fmt.Println(m)
 		db.writeChan <- m
 		fmt.Fprintln(w, r.FormValue("value"))
 	}
