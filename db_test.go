@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestSet(t *testing.T) {
+	fmt.Println("Testing SET")
 	c := 9
 	b := make([]byte, c)
 	_, err := rand.Read(b)
@@ -32,7 +34,8 @@ func TestSet(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestSetAndGet(t *testing.T) {
+	fmt.Println("Testing SET & GET")
 	c := 9
 	b := make([]byte, c)
 	_, err := rand.Read(b)
@@ -49,7 +52,7 @@ func TestGet(t *testing.T) {
 	if err != nil {
 		t.Error("Expected ", s, " got ", err)
 	} else if string(body) != s {
-		t.Error("Expected ", s, " got ", err)
+		t.Error("Expected ", s, " got ", string(body))
 	}
 	resp, err = http.Get("http://localhost:3001/get/" + s)
 	if err != nil {
@@ -60,11 +63,12 @@ func TestGet(t *testing.T) {
 	if err != nil {
 		t.Error("Expected ", s, " got ", err)
 	} else if string(body) != s {
-		t.Error("Expected ", s, " got ", err)
+		t.Error("Expected ", s, " got ", string(body))
 	}
 }
 
 func TestConcurrency(t *testing.T) {
+	fmt.Println("Testing Concurrency")
 	maxRequests := os.Getenv("MAX_REQUESTS")
 	max, err := strconv.Atoi(maxRequests)
 	if err != nil {
