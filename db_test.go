@@ -32,6 +32,7 @@ func TestSet(t *testing.T) {
 	} else if string(body) != s {
 		t.Error("Expected ", s, " got ", string(body))
 	}
+	fmt.Println("Test passed!")
 }
 
 func TestSetAndGet(t *testing.T) {
@@ -65,6 +66,7 @@ func TestSetAndGet(t *testing.T) {
 	} else if string(body) != s {
 		t.Error("Expected ", s, " got ", string(body))
 	}
+	fmt.Println("Test passed!")
 }
 
 func TestConcurrency(t *testing.T) {
