@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"net/http"
 	"os"
 	"syscall"
 )
@@ -76,7 +74,7 @@ func (db *db) writer() {
 		}
 		copy(db.data, b)
 		s := "SET " + key + ": " + value
-		b = append(db.log.data, []byte(s))
+		b = append(db.log.data, []byte(s)...)
 		if len(b) > len(db.log.data) {
 			db.log.extend(len(b))
 		}
@@ -93,7 +91,7 @@ func initDB(dbFilename string, logFilename string) *db {
 	var file *os.File
 	db := &db{data, dataMap, log, fd, dbFilename, file, writeChan}
 	db.open()
-	f, err := os.Stat(filename)
+	f, err := os.Stat(dbFilename)
 	if err != nil {
 		fmt.Println("Could not stat file: ", err)
 	}

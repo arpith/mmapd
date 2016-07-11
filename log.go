@@ -1,20 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/julienschmidt/httprouter"
-	"net/http"
 	"os"
 	"syscall"
 )
 
 type log struct {
-	data      []byte
-	fd        int
-	filename  string
-	file      *os.File
-	writeChan chan map[string]string
+	data     []byte
+	fd       int
+	filename string
+	file     *os.File
 }
 
 func (log *log) mmap(size int) {
@@ -62,6 +58,5 @@ func initLog(filename string) *log {
 		fmt.Println("Could not stat file: ", err)
 	}
 	log.mmap(int(f.Size()))
-	log.load()
 	return log
 }

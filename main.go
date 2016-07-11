@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"os"
@@ -29,7 +30,7 @@ func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprout
 func main() {
 	dbFilename := "db"
 	logFilename := "log"
-	db := openDB(dbFilename, logFilename)
+	db := initDB(dbFilename, logFilename)
 	handler := NewHandler(db)
 
 	router := httprouter.New()
