@@ -78,8 +78,6 @@ func TestSetAndGet(t *testing.T) {
 	resp, err = http.Get("http://localhost:3001/get/" + s)
 	if err != nil {
 		t.Error("Couldn't get ", s, ": ", err)
-	} else {
-		fmt.Println("Got a response", resp)
 	}
 	defer resp.Body.Close()
 	body, err = ioutil.ReadAll(resp.Body)

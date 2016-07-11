@@ -32,7 +32,7 @@ func (db *db) load() {
 }
 
 func (db *db) mmap(size int) {
-	fmt.Println("mmapping: ", size)
+	fmt.Println("mmapping db file: ", size)
 	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		fmt.Println("Error mmapping: ", err)
@@ -41,7 +41,7 @@ func (db *db) mmap(size int) {
 }
 
 func (db *db) resize(size int) {
-	fmt.Println("Resizing: ", size)
+	fmt.Println("Resizing db file: ", size)
 	err := syscall.Ftruncate(db.fd, int64(size))
 	if err != nil {
 		fmt.Println("Error resizing: ", err)
@@ -49,7 +49,7 @@ func (db *db) resize(size int) {
 }
 
 func (db *db) open() {
-	fmt.Println("Getting file descriptor")
+	fmt.Println("Getting db file descriptor")
 	f, err := os.OpenFile(db.filename, os.O_CREATE|os.O_RDWR, 0)
 	if err != nil {
 		fmt.Println("Could not open file: ", err)
@@ -80,7 +80,7 @@ func (db *db) listener() {
 				db.extend(len(b))
 			}
 			copy(db.data, b)
-			s := "SET " + key + ": " + value
+			s := "SET " + key + ": " + value + "\n"
 			b = append(db.log.data, []byte(s)...)
 			if len(b) > len(db.log.data) {
 				db.log.extend(len(b))
@@ -89,7 +89,12 @@ func (db *db) listener() {
 
 		case readReq := <-db.readChan:
 			key := readReq.key
-			readReq.returnChan <- db.dataMap[key]
+			returnChan := readReq.returnChan
+			if value, ok := db.dataMap[key]; ok {
+				returnChan <- value
+			} else {
+				returnChan <- "ERROR: NOT FOUND"
+			}
 		}
 	}
 }

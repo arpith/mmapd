@@ -16,7 +16,12 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		m := readChanMessage{key, c}
 		db.readChan <- m
 		value := <-c
-		fmt.Fprint(w, value)
+		close(c)
+		if value == "ERROR: NOT FOUND" {
+			http.NotFound(w, r)
+		} else {
+			fmt.Fprint(w, value)
+		}
 	case "POST":
 		m := make(map[string]string)
 		m["key"] = ps.ByName("key")
