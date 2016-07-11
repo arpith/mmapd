@@ -12,6 +12,23 @@ import (
 	"testing"
 )
 
+func TestGet(t *testing.T) {
+	fmt.Println("Testing GET")
+	resp, err := http.Get("http://localhost:3001/get/testKey")
+	if err != nil {
+		t.Error("Couldn't get testKey: ", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Error("Expected testValue got ", err)
+	} else if string(body) != "testValue" {
+		t.Error("Expected testValue got ", string(body))
+	} else {
+		fmt.Println("Test Passed!")
+	}
+}
+
 func TestSet(t *testing.T) {
 	fmt.Println("Testing SET")
 	c := 9
@@ -31,8 +48,9 @@ func TestSet(t *testing.T) {
 		t.Error("Expected ", s, " got ", err)
 	} else if string(body) != s {
 		t.Error("Expected ", s, " got ", string(body))
+	} else {
+		fmt.Println("Test passed!")
 	}
-	fmt.Println("Test passed!")
 }
 
 func TestSetAndGet(t *testing.T) {
@@ -54,10 +72,14 @@ func TestSetAndGet(t *testing.T) {
 		t.Error("Expected ", s, " got ", err)
 	} else if string(body) != s {
 		t.Error("Expected ", s, " got ", string(body))
+	} else {
+		fmt.Println("Set ", s)
 	}
 	resp, err = http.Get("http://localhost:3001/get/" + s)
 	if err != nil {
 		t.Error("Couldn't get ", s, ": ", err)
+	} else {
+		fmt.Println("Got a response", resp)
 	}
 	defer resp.Body.Close()
 	body, err = ioutil.ReadAll(resp.Body)
@@ -65,8 +87,9 @@ func TestSetAndGet(t *testing.T) {
 		t.Error("Expected ", s, " got ", err)
 	} else if string(body) != s {
 		t.Error("Expected ", s, " got ", string(body))
+	} else {
+		fmt.Println("Test passed!")
 	}
-	fmt.Println("Test passed!")
 }
 
 func TestConcurrency(t *testing.T) {
