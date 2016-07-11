@@ -15,7 +15,7 @@ type log struct {
 
 func (log *log) mmap(size int) {
 	fmt.Println("mmapping log file: ", size)
-	data, err := syscall.Mmap(log.fd, 0, size*2, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
+	data, err := syscall.Mmap(log.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
 		fmt.Println("Error mmapping: ", err)
 	}
@@ -24,7 +24,7 @@ func (log *log) mmap(size int) {
 
 func (log *log) resize(size int) {
 	fmt.Println("Resizing log file: ", size)
-	err := syscall.Ftruncate(log.fd, int64(size*2))
+	err := syscall.Ftruncate(log.fd, int64(size))
 	if err != nil {
 		fmt.Println("Error resizing log file: ", err)
 	}
@@ -57,6 +57,11 @@ func initLog(filename string) *log {
 	if err != nil {
 		fmt.Println("Could not stat file: ", err)
 	}
-	log.mmap(int(f.Size()))
+	size := int(f.Size())
+	if size == 0 {
+		size = 10
+		log.resize(size)
+	}
+	log.mmap(size)
 	return log
 }
