@@ -12,6 +12,7 @@ import (
 type db struct {
 	data      []byte
 	dataMap   map[string]string
+	log       *log
 	fd        int
 	filename  string
 	file      *os.File
@@ -63,7 +64,9 @@ func (db *db) extend(size int) {
 func (db *db) writer() {
 	for {
 		req := <-db.writeChan
-		db.dataMap[req["key"]] = req["value"]
+		key := req["key"]
+		value := req["value"]
+		db.dataMap[key] = value
 		b, err := json.Marshal(db.dataMap)
 		if err != nil {
 			fmt.Println("Error marshalling db: ", err)
@@ -72,35 +75,23 @@ func (db *db) writer() {
 			db.extend(len(b))
 		}
 		copy(db.data, b)
+		s := "SET " + key + ": " + value
+		b = append(db.log.data, []byte(s))
+		if len(b) > len(db.log.data) {
+			db.log.extend(len(b))
+		}
+		copy(db.log.data, b)
 	}
 }
 
-func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	switch r.Method {
-	case "GET":
-		key := ps.ByName("key")
-		value := db.dataMap[key]
-		fmt.Fprintln(w, value)
-	case "POST":
-		m := make(map[string]string)
-		m["key"] = ps.ByName("key")
-		m["value"] = r.FormValue("value")
-		db.writeChan <- m
-		fmt.Fprintln(w, r.FormValue("value"))
-	}
-}
-
-func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	return db.handler
-}
-
-func openDB(filename string) *db {
+func initDB(dbFilename string, logFilename string) *db {
+	log := initLog(logFilename)
 	writeChan := make(chan map[string]string, 250)
 	dataMap := make(map[string]string)
 	var data []byte
 	var fd int
 	var file *os.File
-	db := &db{data, dataMap, fd, filename, file, writeChan}
+	db := &db{data, dataMap, log, fd, dbFilename, file, writeChan}
 	db.open()
 	f, err := os.Stat(filename)
 	if err != nil {

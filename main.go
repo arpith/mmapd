@@ -7,9 +7,29 @@ import (
 	"strings"
 )
 
+func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	switch r.Method {
+	case "GET":
+		key := ps.ByName("key")
+		value := db.dataMap[key]
+		fmt.Fprintln(w, value)
+	case "POST":
+		m := make(map[string]string)
+		m["key"] = ps.ByName("key")
+		m["value"] = r.FormValue("value")
+		db.writeChan <- m
+		fmt.Fprintln(w, r.FormValue("value"))
+	}
+}
+
+func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	return db.handler
+}
+
 func main() {
-	filename := "db"
-	db := openDB(filename)
+	dbFilename := "db"
+	logFilename := "log"
+	db := openDB(dbFilename, logFilename)
 	handler := NewHandler(db)
 
 	router := httprouter.New()
