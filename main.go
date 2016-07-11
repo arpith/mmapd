@@ -12,8 +12,11 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	switch r.Method {
 	case "GET":
 		key := ps.ByName("key")
-		value := db.dataMap[key]
-		fmt.Fprintln(w, value)
+		c := make(chan string)
+		m := readChanMessage{key, c}
+		db.readChan <- m
+		value := <-c
+		fmt.Fprint(w, value)
 	case "POST":
 		m := make(map[string]string)
 		m["key"] = ps.ByName("key")
