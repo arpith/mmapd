@@ -19,7 +19,7 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		m["key"] = ps.ByName("key")
 		m["value"] = r.FormValue("value")
 		db.writeChan <- m
-		fmt.Fprintln(w, r.FormValue("value"))
+		fmt.Fprint(w, r.FormValue("value"))
 	}
 }
 
