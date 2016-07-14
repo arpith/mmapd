@@ -68,16 +68,17 @@ func (server *server) startElection() {
 
 }
 
-func (server *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
-	if request.termID < server.term.id {
+func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
+	if request.termID < s.term.id {
 		fmt.Fprint(w, false)
 	} else {
-		cond1 := server.term.vote == ""
-		cond2 := server.term.vote == request.candidateID
-		cond3 := request.lastLogIndex >= server.lastLogIndex
+		cond1 := s.term.vote == ""
+		cond2 := s.term.vote == request.candidateID
+		cond3 := request.lastLogIndex >= s.lastLogIndex
 		if (cond1 || cond2) && cond3 {
-			server.term.vote = request.candidateID
-			server.term.id = request.termID
+			s.electionTimeout.resetTimeout()
+			s.term.vote = request.candidateID
+			s.term.id = request.termID
 			fmt.Fprint(w, true)
 		}
 	}
