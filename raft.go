@@ -8,6 +8,11 @@ import (
 	"syscall"
 )
 
+type appendEntriesResponse struct {
+	term    string
+	success bool
+}
+
 type voteRequest struct {
 	ip     string
 	termID int
@@ -20,22 +25,77 @@ type term struct {
 }
 
 type server struct {
-	ip               string
-	state            string
-	term             term
+	id               string
+	term             string
+	db               *db
 	electionTimeout  int
 	heartbeatTimeout int
 	config           []string
 	receiveChan      chan string
+	commitIndex      int
+	lastApplied      int
+	nextIndex        []int
+	matchIndex       []int
 }
 
-func (server *server) sendRequestForVotes(server) {
-	form := url.Values{"id": {server.ip}, "term": {server.term.id}}
-	resp, err := http.PostForm(server+"/votes", form)
+func (s *server) sendRequestForVotes(server) {
+	v := url.Values{}
+	v.set("candidateID", s.id)
+	v.set("term", s.term)
+	v.set("lastLogIndex", len(s.db.log))
+	v.set("lastLogTerm", s.db.log[len(s.db.log)-1].term)
+	resp, err := http.PostForm(server+"/votes", v)
 	if err != nil {
 		fmt.Println("Couldn't send request for votes to " + server)
 	}
 	defer resp.Body.Close()
+}
+
+func (s *server) sendAppendEntryRequest(followerIndex, entry) {
+	follower := s.config[followerIndex]
+	v := url.Values{}
+	v.set("term", s.term)
+	v.set("leaderID", s.id)
+	v.set("prevLogIndex", len(s.db.log))
+	v.set("entry", entry)
+	v.set("leaderCommit", s.commitIndex)
+	resp, err := http.PostForm(follower+"/appendEntry", v)
+	if err != nil {
+		fmt.Println("Couldn't send append entry request to " + follower)
+	}
+	r := &AppendEntriesResponse{}
+	json.NewDecoder(resp.Body).Decode(r)
+	if r.term > s.term {
+		s.term = r.term
+		s.convertToFollower()
+	}
+	if r.success {
+		s.term = r.term
+		s.nextIndex[followerIndex]++
+		s.matchIndex[followerIndex]++
+	} else {
+		s.nextIndex[followerIndex]--
+		go s.sendAppendEntryRequest(followerIndex, entry)
+	}
+	defer resp.Body.Close()
+	for N := s.commitIndex + 1; N < len(s.db.log); N++ {
+		//Check if there exists an N > commitIndex
+		count := 0
+		for i := 0; i < len(s.matchIndex); i++ {
+			if s.matchIndex[i] >= N {
+				count++
+			}
+			// Check if a majority of matchIndex[i] >= N
+			cond1 := count > len(s.matchIndex)/2
+			// Check if log[N].term == currentTerm
+			cond2 := s.db.log[N].term == s.term
+			if cond1 && cond2 {
+				// Set commitIndex to N
+				s.commitIndex = N
+				break
+			}
+		}
+	}
 }
 
 func (server *server) startElectionTerm() {
@@ -47,9 +107,6 @@ func (server *server) startElectionTerm() {
 	}
 }
 
-func (server *server) sendAppendEntryRequests() {
-}
-
 func (server *server) stepDown() {
 
 }
@@ -57,7 +114,7 @@ func (server *server) stepDown() {
 func (server *server) handleVote() {
 }
 
-func (server *server) handleRequestForVote(equest voteRequest, w httpResponse) {
+func (server *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
 	if request.termID < server.term.id {
 		fmt.Fprint(w, false)
 	} else {
@@ -72,22 +129,20 @@ func (server *server) handleRequestForVote(equest voteRequest, w httpResponse) {
 	}
 }
 
-func (server *server) handleAppendEntryRequest(request appendEntryRequest) {
-	if request.termID < server.term.id {
+func (s *server) handleAppendEntryRequest(req appendEntryRequest, w http.ResponseWriter) {
+	if req.termID < s.term.id {
 		fmt.Fprint(w, false)
-	} else if server.log[request.prevLogIndex].term != req.prevLogTerm {
+	} else if s.db.log[request.prevLogIndex].term != req.prevLogTerm {
 		fmt.Fprint(w, false)
-	} else if server.log[req.index].term != req.term {
-		server.log = server.log[:req.index]
+	} else if s.db.log[req.index].term != req.term {
+		s.db.log = s.db.log[:req.index]
 	}
-	server.log = server.log.appendEntry(req.entry)
-	if req.commitIndex > server.commitIndex {
+	s.db.log = s.db.log.appendEntry(req.entry)
+	if req.commitIndex > s.commitIndex {
 		s.commitIndex = Min(req.commitIndex, req.entry.index)
 	}
+	fmt.Fprint(w, true)
 
-}
-
-func (server *server) appendEntry(entry entry) {
 }
 
 func (server *server) listener() {
@@ -112,7 +167,7 @@ func readConfig(filename) []string {
 	return servers
 }
 
-func initServer(ip string) *server {
+func initServer(ip string, db *db) *server {
 	state := "follower"
 	term := &term{0, false, 0}
 	electionTimeout := 150 + rand.Int(rand.Reader, 150)
