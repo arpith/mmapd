@@ -29,10 +29,10 @@ func (server *server) listener() {
 			server.handleRequestForVote(v)
 		case e := <-server.appendEntry:
 			server.handleAppendEntryRequest(e)
-		case <-time.After(server.electionTimeout * time.Millisecond):
-			server.startElection()
-		case <-time.After(server.heartbeatTimeout * time.Millisecond):
-			server.appendEntry("")
+		case <-s.heartbeatTimeout.ticker:
+			s.appendEntry("")
+		case <-s.electionTimeout.ticker:
+			s.startElection()
 		}
 	}
 }
