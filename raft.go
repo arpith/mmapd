@@ -8,8 +8,18 @@ import (
 	"syscall"
 )
 
+type requestForVotesResponse struct {
+	term           int
+	hasGrantedVote bool
+}
+
+type voteResponse struct {
+	serverIndex int
+	resp        requestForVotesResponse
+}
+
 type appendEntriesResponse struct {
-	term    string
+	term    int
 	success bool
 }
 
@@ -26,7 +36,7 @@ type term struct {
 
 type server struct {
 	id               string
-	term             string
+	term             int
 	db               *db
 	electionTimeout  int
 	heartbeatTimeout int
@@ -38,7 +48,7 @@ type server struct {
 	matchIndex       []int
 }
 
-func (s *server) sendRequestForVotes(server) {
+func (s *server) sendRequestForVotes(receiver string, respChan chan RequestForVotesResponse) {
 	v := url.Values{}
 	v.set("candidateID", s.id)
 	v.set("term", s.term)
@@ -49,6 +59,10 @@ func (s *server) sendRequestForVotes(server) {
 		fmt.Println("Couldn't send request for votes to " + server)
 	}
 	defer resp.Body.Close()
+	r = &RequestForVotesResponse{}
+	json.NewDecoder(resp.Body).Decode(r)
+	v = &VoteResponse{receiver, r}
+	respChan <- v
 }
 
 func (s *server) sendAppendEntryRequest(followerIndex, entry) {
@@ -98,17 +112,29 @@ func (s *server) sendAppendEntryRequest(followerIndex, entry) {
 	}
 }
 
-func (server *server) startElectionTerm() {
+func (server *server) startElection() {
 	server.state = "candidate"
 	server.term += 1
 	server.term.votes += 1
-	for _, server := range server.config {
-		go server.sendRequestForVotes(server)
+	respChan = make(chan voteResponse)
+	for receiverIndex, _ := range server.config {
+		go server.sendRequestForVotes(receiverIndex)
 	}
+	voteCount = 0
+	for {
+		vote := <-respChan
+		if voteResponse.resp.hasGrantedVote {
+			voteCount++
+		}
+		if voteCount > len(s.config)/2 {
+			s.state = "leader"
+			break
+		}
+	}
+
 }
 
 func (server *server) stepDown() {
-
 }
 
 func (server *server) handleVote() {
@@ -146,15 +172,17 @@ func (s *server) handleAppendEntryRequest(req appendEntryRequest, w http.Respons
 }
 
 func (server *server) listener() {
-	select {
-	case v := <-server.requestForVote:
-		server.handleRequestForVote(v)
-	case e := <-server.appendEntry:
-		server.handleAppendEntryRequest(e)
-	case <-time.After(server.electionTimeout * time.Millisecond):
-		server.startElectionTerm()
-	case <-time.After(server.heartbeatTimeout * time.Millisecond):
-		server.appendEntry("")
+	for {
+		select {
+		case v := <-server.requestForVote:
+			server.handleRequestForVote(v)
+		case e := <-server.appendEntry:
+			server.handleAppendEntryRequest(e)
+		case <-time.After(server.electionTimeout * time.Millisecond):
+			server.startElection()
+		case <-time.After(server.heartbeatTimeout * time.Millisecond):
+			server.appendEntry("")
+		}
 	}
 }
 
