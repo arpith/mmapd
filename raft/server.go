@@ -8,32 +8,6 @@ import (
 	"syscall"
 )
 
-type requestForVotesResponse struct {
-	term           int
-	hasGrantedVote bool
-}
-
-type voteResponse struct {
-	serverIndex int
-	resp        requestForVotesResponse
-}
-
-type appendEntriesResponse struct {
-	term    int
-	success bool
-}
-
-type voteRequest struct {
-	ip     string
-	termID int
-}
-
-type term struct {
-	id       int
-	votes    int
-	votedFor string
-}
-
 type server struct {
 	id               string
 	term             int
