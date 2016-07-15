@@ -1,11 +1,8 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"os"
-	"syscall"
 )
 
 type requestForVotesResponse struct {

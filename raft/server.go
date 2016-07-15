@@ -2,16 +2,13 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
-	"os"
-	"syscall"
 )
 
 type server struct {
 	id               string
 	term             int
-	db               *db
+	db               db
 	electionTimeout  int
 	heartbeatTimeout int
 	config           []string
