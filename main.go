@@ -15,12 +15,12 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		c := make(chan string)
 		m := readChanMessage{key, c}
 		db.readChan <- m
-		value := <-c
+		m = <-c
 		close(c)
-		if value == "ERROR: NOT FOUND" {
+		if m.err == "Invalid Key" {
 			http.NotFound(w, r)
 		} else {
-			fmt.Fprint(w, value)
+			fmt.Fprint(w, m.json)
 		}
 	case "POST":
 		m := make(map[string]string)

@@ -2,14 +2,20 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"syscall"
 )
 
+type returnChanMessage struct {
+	err  error
+	json string
+}
+
 type readChanMessage struct {
 	key        string
-	returnChan chan string
+	returnChan chan returnChanMessage
 }
 
 type db struct {
@@ -91,9 +97,11 @@ func (db *db) listener() {
 			key := readReq.key
 			returnChan := readReq.returnChan
 			if value, ok := db.dataMap[key]; ok {
-				returnChan <- value
+				m := &returnChanMessage{nil, value}
+				returnChan <- m
 			} else {
-				returnChan <- "ERROR: NOT FOUND"
+				m := &returnChanMessage{errors.New("Invalid Key"), nil}
+				returnChan <- m
 			}
 		}
 	}
