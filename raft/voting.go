@@ -18,18 +18,23 @@ type voteResponse struct {
 	resp        requestForVotesResponse
 }
 
-type voteRequest struct {
-	ip     string
-	termID int
+func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
+	if request.term < s.term {
+		fmt.Fprint(w, false)
+	} else {
+		cond1 := s.votedFor == ""
+		cond2 := s.votedFor == request.candidateID
+		cond3 := request.lastLogIndex >= len(s.log)
+		if (cond1 || cond2) && cond3 {
+			s.electionTimeout.resetTimeout()
+			s.votedFor = request.candidateID
+			s.term = request.term
+			fmt.Fprint(w, true)
+		}
+	}
 }
 
-type term struct {
-	id       int
-	votes    int
-	votedFor string
-}
-
-func (s *server) sendRequestForVotes(receiver string, respChan chan RequestForVotesResponse) {
+func (s *server) sendRequestForVote(receiver string, respChan chan RequestForVoteResponse) {
 	v := url.Values{}
 	v.set("candidateID", s.id)
 	v.set("term", s.term)
@@ -40,7 +45,7 @@ func (s *server) sendRequestForVotes(receiver string, respChan chan RequestForVo
 		fmt.Println("Couldn't send request for votes to " + server)
 	}
 	defer resp.Body.Close()
-	r = &RequestForVotesResponse{}
+	r = &RequestForVoteResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
 	v = &VoteResponse{receiver, r}
 	respChan <- v
@@ -55,31 +60,19 @@ func (server *server) startElection() {
 		go server.sendRequestForVotes(receiverIndex)
 	}
 	voteCount = 0
+	responseCount = 0
 	for {
 		vote := <-respChan
-		if voteResponse.resp.hasGrantedVote {
+		responseCount++
+		if vote.resp.hasGrantedVote {
 			voteCount++
 		}
 		if voteCount > len(s.config)/2 {
 			s.state = "leader"
 			break
 		}
-	}
-
-}
-
-func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
-	if request.termID < s.term.id {
-		fmt.Fprint(w, false)
-	} else {
-		cond1 := s.term.vote == ""
-		cond2 := s.term.vote == request.candidateID
-		cond3 := request.lastLogIndex >= s.lastLogIndex
-		if (cond1 || cond2) && cond3 {
-			s.electionTimeout.resetTimeout()
-			s.term.vote = request.candidateID
-			s.term.id = request.termID
-			fmt.Fprint(w, true)
+		if responseCount == len(s.config) {
+			break
 		}
 	}
 }
