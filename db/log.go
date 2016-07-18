@@ -6,8 +6,14 @@ import (
 	"syscall"
 )
 
+type Entry struct {
+	Command string
+	Term    int
+}
+
 type Log struct {
 	data     []byte
+	Entries  []Entry
 	fd       int
 	filename string
 	file     *os.File
@@ -49,9 +55,10 @@ func (log *Log) extend(size int) {
 
 func initLog(filename string) *Log {
 	var data []byte
+	var entries []Entry
 	var fd int
 	var file *os.File
-	log := &Log{data, fd, filename, file}
+	log := &Log{data, entries, fd, filename, file}
 	log.open()
 	f, err := os.Stat(filename)
 	if err != nil {

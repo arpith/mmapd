@@ -21,7 +21,7 @@ type readChanMessage struct {
 type DB struct {
 	data      []byte
 	dataMap   map[string]string
-	log       *Log
+	Log       *Log
 	fd        int
 	filename  string
 	file      *os.File
@@ -87,11 +87,11 @@ func (db *DB) listener() {
 			}
 			copy(db.data, b)
 			s := "SET " + key + ": " + value + "\n"
-			b = append(db.log.data, []byte(s)...)
-			if len(b) > len(db.log.data) {
-				db.log.extend(len(b))
+			b = append(db.Log.data, []byte(s)...)
+			if len(b) > len(db.Log.data) {
+				db.Log.extend(len(b))
 			}
-			copy(db.log.data, b)
+			copy(db.Log.data, b)
 
 		case readReq := <-db.readChan:
 			key := readReq.key
