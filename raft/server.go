@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
+	"github.com/arpith/mmapd/db/db.go"
 )
 
 type server struct {

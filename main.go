@@ -36,8 +36,8 @@ func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprout
 }
 
 func main() {
-	dbFilename := "db"
-	logFilename := "log"
+	dbFilename := "../db.json"
+	logFilename := "../log.json"
 	db := initDB(dbFilename, logFilename)
 	handler := NewHandler(db)
 
