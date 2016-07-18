@@ -6,14 +6,14 @@ import (
 	"syscall"
 )
 
-type log struct {
+type Log struct {
 	data     []byte
 	fd       int
 	filename string
 	file     *os.File
 }
 
-func (log *log) mmap(size int) {
+func (log *Log) mmap(size int) {
 	fmt.Println("mmapping log file: ", size)
 	data, err := syscall.Mmap(log.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
@@ -22,7 +22,7 @@ func (log *log) mmap(size int) {
 	log.data = data
 }
 
-func (log *log) resize(size int) {
+func (log *Log) resize(size int) {
 	fmt.Println("Resizing log file: ", size)
 	err := syscall.Ftruncate(log.fd, int64(size))
 	if err != nil {
@@ -30,7 +30,7 @@ func (log *log) resize(size int) {
 	}
 }
 
-func (log *log) open() {
+func (log *Log) open() {
 	fmt.Println("Getting log file descriptor")
 	f, err := os.OpenFile(log.filename, os.O_CREATE|os.O_RDWR, 0)
 	if err != nil {
@@ -40,18 +40,18 @@ func (log *log) open() {
 	log.file = f
 }
 
-func (log *log) extend(size int) {
+func (log *Log) extend(size int) {
 	log.file.Close()
 	log.open()
 	log.resize(size)
 	log.mmap(size)
 }
 
-func initLog(filename string) *log {
+func initLog(filename string) *Log {
 	var data []byte
 	var fd int
 	var file *os.File
-	log := &log{data, fd, filename, file}
+	log := &Log{data, fd, filename, file}
 	log.open()
 	f, err := os.Stat(filename)
 	if err != nil {

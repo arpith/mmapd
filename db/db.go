@@ -21,7 +21,7 @@ type readChanMessage struct {
 type DB struct {
 	data      []byte
 	dataMap   map[string]string
-	log       *log
+	log       *Log
 	fd        int
 	filename  string
 	file      *os.File
