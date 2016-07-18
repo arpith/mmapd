@@ -6,7 +6,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"os"
-	"server"
 	"strings"
 )
 
