@@ -13,14 +13,14 @@ type voteRequest struct {
 	lastLogTerm  int
 }
 
-type requestForVotesResponse struct {
+type requestForVoteResponse struct {
 	term           int
 	hasGrantedVote bool
 }
 
 type voteResponse struct {
 	serverIndex int
-	resp        requestForVotesResponse
+	resp        requestForVoteResponse
 }
 
 func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
@@ -39,7 +39,7 @@ func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter
 	}
 }
 
-func (s *server) sendRequestForVote(receiver string, respChan chan RequestForVoteResponse) {
+func (s *server) sendRequestForVote(receiver string, respChan chan requestForVoteResponse) {
 	v := url.Values{}
 	v.set("candidateID", s.id)
 	v.set("term", s.term)
@@ -50,7 +50,7 @@ func (s *server) sendRequestForVote(receiver string, respChan chan RequestForVot
 		fmt.Println("Couldn't send request for votes to " + server)
 	}
 	defer resp.Body.Close()
-	r = &RequestForVoteResponse{}
+	r = &requestForVoteResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
 	v = &VoteResponse{receiver, r}
 	respChan <- v
