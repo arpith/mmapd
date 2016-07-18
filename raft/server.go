@@ -3,13 +3,13 @@ package main
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/arpith/mmapd/db/db.go"
+	"github.com/arpith/mmapd/db"
 )
 
 type server struct {
 	id               string
 	term             int
-	db               db
+	db               db.DB
 	electionTimeout  int
 	heartbeatTimeout int
 	config           []string
@@ -44,7 +44,7 @@ func readConfig(filename) []string {
 	return servers
 }
 
-func initServer(ip string, db *db) *server {
+func initServer(ip string, db *db.DB) *server {
 	state := "follower"
 	term := &term{0, false, 0}
 	electionTimeout := 150 + rand.Int(rand.Reader, 150)

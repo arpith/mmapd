@@ -2,13 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/arpith/mmapd/db"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"os"
+	"server"
 	"strings"
 )
 
-func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (db *DB) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch r.Method {
 	case "GET":
 		key := ps.ByName("key")
@@ -31,7 +33,7 @@ func (db *db) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 }
 
-func NewHandler(db *db) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func NewHandler(db *DB) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	return db.handler
 }
 
