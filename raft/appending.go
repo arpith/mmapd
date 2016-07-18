@@ -16,6 +16,7 @@ type appendEntryRequest struct {
 	prevLogTerm  int
 	entry        db.Entry
 	leaderCommit int
+	returnChan   chan bool
 }
 
 type appendEntryResponse struct {
@@ -72,21 +73,23 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
 
 func (s *server) handleAppendEntryRequest(req appendEntryRequest, w http.ResponseWriter) {
 	if req.term < s.term {
-		fmt.Fprint(w, false)
-	} else if s.db.Log[req.prevLogIndex].term != req.prevLogTerm {
-		fmt.Fprint(w, false)
-	} else if s.db.Log[req.index].term != req.term {
-		s.db.Log.Entries = s.db.Log.Entries[:req.index]
-		s.db.Log.setEntries()
-	}
-	s.db.Log = s.db.Log.appendEntry(req.entry)
-	if req.commitIndex < s.commitIndex {
-		// Set commit index to the min of the leader's commit index and index of last new entry
-		if req.commitIndex < req.entry.index {
-			s.commitIndex = req.commitIndex
-		} else {
-			s.commitIndex = req.entry.index
+		req.returnChan <- false
+	} else if s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
+		req.returnChan <- false
+	} else {
+		if s.db.Log[req.index].term != req.term {
+			s.db.Log.Entries = s.db.Log.Entries[:req.index]
+			s.db.Log.setEntries()
 		}
+		s.db.Log = s.db.Log.appendEntry(req.entry)
+		if req.leaderCommit < s.commitIndex {
+			// Set commit index to the min of the leader's commit index and index of last new entry
+			if req.leaderCommit < req.entry.index {
+				s.commitIndex = req.leaderCommit
+			} else {
+				s.commitIndex = req.entry.index
+			}
+		}
+		req.returnChan <- true
 	}
-	fmt.Fprint(w, true)
 }
