@@ -11,6 +11,7 @@ type voteRequest struct {
 	candidateId  string
 	lastLogIndex int
 	lastLogTerm  int
+	returnChan   chan bool
 }
 
 type requestForVoteResponse struct {
@@ -23,9 +24,9 @@ type voteResponse struct {
 	resp        requestForVoteResponse
 }
 
-func (s *server) handleRequestForVote(request voteRequest, w http.ResponseWriter) {
+func (s *server) handleRequestForVote(req voteRequest) {
 	if request.term < s.term {
-		fmt.Fprint(w, false)
+		req.returnChan <- false
 	} else {
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == request.candidateID
