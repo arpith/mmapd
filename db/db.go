@@ -18,7 +18,7 @@ type readChanMessage struct {
 	returnChan chan returnChanMessage
 }
 
-type db struct {
+type DB struct {
 	data      []byte
 	dataMap   map[string]string
 	log       *log
@@ -29,7 +29,7 @@ type db struct {
 	readChan  chan readChanMessage
 }
 
-func (db *db) load() {
+func (db *DB) load() {
 	err := json.Unmarshal(db.data, &db.dataMap)
 	if err != nil {
 		fmt.Println("Error unmarshalling initial data into map: ", err)
@@ -37,7 +37,7 @@ func (db *db) load() {
 	fmt.Println(db.dataMap)
 }
 
-func (db *db) mmap(size int) {
+func (db *DB) mmap(size int) {
 	fmt.Println("mmapping db file: ", size)
 	data, err := syscall.Mmap(db.fd, 0, size, syscall.PROT_WRITE|syscall.PROT_READ, syscall.MAP_SHARED)
 	if err != nil {
@@ -46,7 +46,7 @@ func (db *db) mmap(size int) {
 	db.data = data
 }
 
-func (db *db) resize(size int) {
+func (db *DB) resize(size int) {
 	fmt.Println("Resizing db file: ", size)
 	err := syscall.Ftruncate(db.fd, int64(size))
 	if err != nil {
@@ -54,7 +54,7 @@ func (db *db) resize(size int) {
 	}
 }
 
-func (db *db) open() {
+func (db *DB) open() {
 	fmt.Println("Getting db file descriptor")
 	f, err := os.OpenFile(db.filename, os.O_CREATE|os.O_RDWR, 0)
 	if err != nil {
@@ -64,14 +64,14 @@ func (db *db) open() {
 	db.file = f
 }
 
-func (db *db) extend(size int) {
+func (db *DB) extend(size int) {
 	db.file.Close()
 	db.open()
 	db.resize(size)
 	db.mmap(size)
 }
 
-func (db *db) listener() {
+func (db *DB) listener() {
 	for {
 		select {
 		case writeReq := <-db.writeChan:
@@ -107,7 +107,7 @@ func (db *db) listener() {
 	}
 }
 
-func initDB(dbFilename string, logFilename string) *db {
+func initDB(dbFilename string, logFilename string) *DB {
 	log := initLog(logFilename)
 	writeChan := make(chan map[string]string, 250)
 	readChan := make(chan readChanMessage)
@@ -115,7 +115,7 @@ func initDB(dbFilename string, logFilename string) *db {
 	var data []byte
 	var fd int
 	var file *os.File
-	db := &db{data, dataMap, log, fd, dbFilename, file, writeChan, readChan}
+	db := &DB{data, dataMap, log, fd, dbFilename, file, writeChan, readChan}
 	db.open()
 	f, err := os.Stat(dbFilename)
 	if err != nil {
