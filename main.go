@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/arpith/mmapd/db"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
@@ -9,38 +8,11 @@ import (
 	"strings"
 )
 
-func (db *DB) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	switch r.Method {
-	case "GET":
-		key := ps.ByName("key")
-		c := make(chan string)
-		m := readChanMessage{key, c}
-		db.readChan <- m
-		m = <-c
-		close(c)
-		if m.err == "Invalid Key" {
-			http.NotFound(w, r)
-		} else {
-			fmt.Fprint(w, m.json)
-		}
-	case "POST":
-		m := make(map[string]string)
-		m["key"] = ps.ByName("key")
-		m["value"] = r.FormValue("value")
-		db.writeChan <- m
-		fmt.Fprint(w, r.FormValue("value"))
-	}
-}
-
-func NewHandler(db *DB) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	return db.handler
-}
-
 func main() {
 	dbFilename := "../db.json"
 	logFilename := "../log.json"
-	db := initDB(dbFilename, logFilename)
-	handler := NewHandler(db)
+	DB := db.Init(dbFilename, logFilename)
+	handler := db.NewHandler(DB)
 
 	router := httprouter.New()
 	router.GET("/get/:key", handler)

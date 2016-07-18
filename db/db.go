@@ -107,7 +107,7 @@ func (db *DB) listener() {
 	}
 }
 
-func initDB(dbFilename string, logFilename string) *DB {
+func Init(dbFilename string, logFilename string) *DB {
 	log := initLog(logFilename)
 	writeChan := make(chan map[string]string, 250)
 	readChan := make(chan readChanMessage)
