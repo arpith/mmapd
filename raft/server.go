@@ -7,25 +7,26 @@ import (
 )
 
 type server struct {
-	id               string
-	term             int
-	db               db.DB
-	electionTimeout  int
-	heartbeatTimeout int
-	config           []string
-	receiveChan      chan string
-	commitIndex      int
-	lastApplied      int
-	nextIndex        []int
-	matchIndex       []int
+	id                  string
+	term                int
+	db                  db.DB
+	electionTimeout     int
+	heartbeatTimeout    int
+	config              []string
+	commitIndex         int
+	lastApplied         int
+	nextIndex           []int
+	matchIndex          []int
+	voteRequests        chan voteRequest
+	appendEntryRequests chan appendEntryRequest
 }
 
 func (server *server) listener() {
 	for {
 		select {
-		case v := <-server.requestForVote:
+		case v := <-server.voteRequests:
 			server.handleRequestForVote(v)
-		case e := <-server.appendEntry:
+		case e := <-server.appendEntryRequests:
 			server.handleAppendEntryRequest(e)
 		case <-s.heartbeatTimeout.ticker:
 			s.appendEntry("")
@@ -35,7 +36,7 @@ func (server *server) listener() {
 	}
 }
 
-func readConfig(filename) []string {
+func readConfig(filename string) []string {
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("Couldn't read config file")
@@ -50,8 +51,9 @@ func initServer(ip string, db *db.DB) *server {
 	electionTimeout := 150 + rand.Int(rand.Reader, 150)
 	heartbeatTimeout := 150 + rand.Int(rand.Reader, 150)
 	config = readConfig("config.txt")
-	receiveChan := make(chan string)
-	server := &server{ip, state, term, electionTimeout, heartbeatTimeout, config, receiveChan}
+	voteChan := make(chan voteRequest)
+	appendChan := make(chan appendEntryRequest)
+	server := &server{ip, state, term, electionTimeout, heartbeatTimeout, config, voteChan, appendChan}
 	go server.listener()
 	return server
 }

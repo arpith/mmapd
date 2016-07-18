@@ -3,7 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 )
+
+type voteRequest struct {
+	term         int
+	candidateId  string
+	lastLogIndex int
+	lastLogTerm  int
+}
 
 type requestForVotesResponse struct {
 	term           int
