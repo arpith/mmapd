@@ -1,10 +1,10 @@
 package raft
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/arpith/mmapd/db"
 	"io/ioutil"
-	"strings"
 	"time"
 )
 
@@ -23,6 +23,8 @@ type server struct {
 	matchIndex          []int
 	voteRequests        chan voteRequest
 	appendEntryRequests chan appendEntryRequest
+	writeRequests       chan writeRequest
+	readRequests        chan readRequest
 }
 
 func (s *server) listener() {
@@ -32,6 +34,10 @@ func (s *server) listener() {
 			s.handleRequestForVote(v)
 		case e := <-s.appendEntryRequests:
 			s.handleAppendEntryRequest(e)
+		case r := <-s.readRequests:
+			s.handleReadRequest(r)
+		case w := <-s.writeRequests:
+			s.handleWriteRequest(w)
 		case <-s.heartbeatTimeout.ticker:
 			s.appendEntry("")
 		case <-s.electionTimeout.ticker:
@@ -41,12 +47,16 @@ func (s *server) listener() {
 }
 
 func readConfig(filename string) []string {
+	var config []string
 	content, err := ioutil.ReadFile(filename)
 	if err != nil {
 		fmt.Println("Couldn't read config file")
 	}
-	servers := strings.Split(string(content), "\n")
-	return servers
+	err = json.Unmarshal(content, &config)
+	if err != nil {
+		fmt.Println("Error unmarshalling config file: ", err)
+	}
+	return config
 }
 
 func Init(id string, configFilename string, db *db.DB) *server {
@@ -66,6 +76,8 @@ func Init(id string, configFilename string, db *db.DB) *server {
 		matchIndex:          make([]int, len(config)),
 		voteRequests:        make(chan voteRequest),
 		appendEntryRequests: make(chan appendEntryRequest),
+		writeRequests:       make(chan writeRequest),
+		readRequests:        make(chan readRequest),
 	}
 	go server.listener()
 	return server
