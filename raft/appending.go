@@ -26,7 +26,9 @@ type appendEntryResponse struct {
 
 func (s *server) appendEntry(entry string) {
 	for i := 0; i < len(s.config); i++ {
-		go s.sendAppendEntryRequest(i, entry)
+		if s.config[i] != s.id {
+			go s.sendAppendEntryRequest(i, entry)
+		}
 	}
 }
 

@@ -67,8 +67,10 @@ func (s *server) startElection() {
 	s.term += 1
 	voteCount := 1
 	respChan := make(chan voteResponse)
-	for receiverIndex, _ := range s.config {
-		go s.sendRequestForVote(receiverIndex, respChan)
+	for receiverIndex, receiverId := range s.config {
+		if receiverId != s.id {
+			go s.sendRequestForVote(receiverIndex, respChan)
+		}
 	}
 	responseCount := 0
 	for {
