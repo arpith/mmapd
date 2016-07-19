@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/arpith/mmapd/db"
+	"github.com/arpith/mmapd/raft"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"os"
@@ -12,11 +13,16 @@ func main() {
 	dbFilename := "../db.json"
 	logFilename := "../log.json"
 	DB := db.Init(dbFilename, logFilename)
-	handler := db.NewHandler(DB)
+	server := raft.Init("ip-address", DB)
+	appendEntryHandler := raft.NewHandler(server, "Append Entry")
+	requestForVoteHandler := raft.NewHandler(server, "Request For Vote")
+	clientRequestHandler := raft.NewHandler(server, "Client Request")
 
 	router := httprouter.New()
-	router.GET("/get/:key", handler)
-	router.POST("/set/:key", handler)
+	router.POST("/append", appendEntryHandler)
+	router.POST("/votes", requestForVoteHandler)
+	router.GET("/get/:key", clientRequestHandler)
+	router.POST("/set/:key", clientRequestHandler)
 
 	port := strings.TrimSpace(os.Getenv("PORT"))
 	if port == "" {
