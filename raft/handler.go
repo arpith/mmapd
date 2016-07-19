@@ -29,6 +29,26 @@ func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, p
 
 func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Println("Haven't figured this out yet!")
+	switch r.Method {
+	case "GET":
+		key := ps.ByName("key")
+		c := make(chan returnChanMessage)
+		m := readChanMessage{key, c}
+		s.readRequests <- m
+		resp := <-c
+		close(c)
+		if resp.err != nil {
+			http.NotFound(w, r)
+		} else {
+			fmt.Fprint(w, resp.json)
+		}
+	case "POST":
+		m := make(map[string]string)
+		m["key"] = ps.ByName("key")
+		m["value"] = r.FormValue("value")
+		s.writeRequests <- m
+		fmt.Fprint(w, r.FormValue("value"))
+	}
 }
 
 func NewHandler(s *server, handlerType string) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
