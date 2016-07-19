@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"syscall"
@@ -17,6 +18,13 @@ type Log struct {
 	fd       int
 	filename string
 	file     *os.File
+}
+
+func (log *Log) load() {
+	err := json.Unmarshal(log.data, &log.Entries)
+	if err != nil {
+		fmt.Println("Error unmarshalling initial data into map: ", err)
+	}
 }
 
 func (log *Log) mmap(size int) {
@@ -51,6 +59,30 @@ func (log *Log) extend(size int) {
 	log.open()
 	log.resize(size)
 	log.mmap(size)
+}
+
+func (log *Log) rewriteLog(entries []Entry) {
+	log.Entries = entries
+	b, err := json.Marshal(log.Entries)
+	if err != nil {
+		fmt.Println("Error marshalling log: ", err)
+	}
+	if len(b) > len(log.data) {
+		log.extend(len(b))
+	}
+	copy(log.data, b)
+}
+
+func (log *Log) appendEntry(entry Entry) {
+	log.Entries = append(log.Entries, Entry)
+	b, err := json.Marshal(log.Entries)
+	if err != nil {
+		fmt.Println("Error marshalling log: ", err)
+	}
+	if len(b) > len(log.data) {
+		log.extend(len(b))
+	}
+	copy(log.data, b)
 }
 
 func initLog(filename string) *Log {
