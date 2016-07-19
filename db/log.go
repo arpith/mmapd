@@ -61,7 +61,7 @@ func (log *Log) extend(size int) {
 	log.mmap(size)
 }
 
-func (log *Log) rewriteLog(entries []Entry) {
+func (log *Log) SetEntries(entries []Entry) {
 	log.Entries = entries
 	b, err := json.Marshal(log.Entries)
 	if err != nil {
@@ -73,7 +73,7 @@ func (log *Log) rewriteLog(entries []Entry) {
 	copy(log.data, b)
 }
 
-func (log *Log) appendEntry(entry Entry) {
+func (log *Log) AppendEntry(entry Entry) {
 	log.Entries = append(log.Entries, entry)
 	b, err := json.Marshal(log.Entries)
 	if err != nil {
