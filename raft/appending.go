@@ -1,4 +1,4 @@
-package main
+package raft
 
 import (
 	"encoding/json"
@@ -46,7 +46,8 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
 	json.NewDecoder(resp.Body).Decode(r)
 	if r.term > s.term {
 		s.term = r.term
-		s.convertToFollower()
+		s.state = "follower"
+		s.electionTimeout.reset()
 	}
 	if r.success {
 		s.term = r.term

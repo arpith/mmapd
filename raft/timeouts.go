@@ -1,4 +1,4 @@
-package main
+package raft
 
 import (
 	"crypto/rand"
@@ -12,7 +12,7 @@ type timeout struct {
 	ticker <-chan time.Time
 }
 
-func (t *timeout) resetTimeout() {
+func (t *timeout) reset() {
 	t.ticker = time.Tick(t.period)
 }
 

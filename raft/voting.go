@@ -1,4 +1,4 @@
-package main
+package raft
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ func (s *server) handleRequestForVote(req voteRequest) {
 		cond2 := s.votedFor == req.candidateId
 		cond3 := req.lastLogIndex >= len(s.db.Log.Entries)
 		if (cond1 || cond2) && cond3 {
-			s.electionTimeout.resetTimeout()
+			s.electionTimeout.reset()
 			s.votedFor = req.candidateId
 			s.term = req.term
 			req.returnChan <- true
