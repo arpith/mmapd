@@ -10,10 +10,11 @@ import (
 )
 
 func main() {
-	dbFilename := "../db.json"
-	logFilename := "../log.json"
+	dbFilename := "db.json"
+	logFilename := "log.json"
+	configFilename := "config.txt"
 	DB := db.Init(dbFilename, logFilename)
-	server := raft.Init("ip-address", DB)
+	server := raft.Init("10.0.17.176", configFilename, DB)
 	appendEntryHandler := raft.NewHandler(server, "Append Entry")
 	requestForVoteHandler := raft.NewHandler(server, "Request For Vote")
 	clientRequestHandler := raft.NewHandler(server, "Client Request")

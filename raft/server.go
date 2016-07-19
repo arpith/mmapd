@@ -49,8 +49,7 @@ func readConfig(filename string) []string {
 	return servers
 }
 
-func Init(id string, db *db.DB) *server {
-	configFilename := "config.txt"
+func Init(id string, configFilename string, db *db.DB) *server {
 	config := readConfig(configFilename)
 	server := &server{
 		id:                  id,
