@@ -24,6 +24,12 @@ type appendEntryResponse struct {
 	success bool
 }
 
+func (s *server) appendEntry(entry string) {
+	for i := 0; i < len(s.config); i++ {
+		go s.sendAppendEntryRequest(i, entry)
+	}
+}
+
 func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
 	follower := s.config[followerIndex]
 	v := url.Values{}
@@ -36,7 +42,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
 	}
-	r := &appendEntriesResponse{}
+	r := &appendEntryResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
 	if r.term > s.term {
 		s.term = r.term
@@ -71,7 +77,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
 	}
 }
 
-func (s *server) handleAppendEntryRequest(req appendEntryRequest, w http.ResponseWriter) {
+func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
 	if req.term < s.term {
 		req.returnChan <- false
 	} else if s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
