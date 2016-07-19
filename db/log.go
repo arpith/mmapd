@@ -74,7 +74,7 @@ func (log *Log) rewriteLog(entries []Entry) {
 }
 
 func (log *Log) appendEntry(entry Entry) {
-	log.Entries = append(log.Entries, Entry)
+	log.Entries = append(log.Entries, entry)
 	b, err := json.Marshal(log.Entries)
 	if err != nil {
 		fmt.Println("Error marshalling log: ", err)
