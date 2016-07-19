@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/rand"
 	"fmt"
 	"github.com/arpith/mmapd/db"
 	"io/ioutil"
-	"math/big"
 	"strings"
 	"time"
 )
@@ -14,6 +12,7 @@ type server struct {
 	id                  string
 	state               string
 	term                int
+	votedFor            string
 	db                  db.DB
 	electionTimeout     timeout
 	heartbeatTimeout    timeout
@@ -50,28 +49,25 @@ func readConfig(filename string) []string {
 	return servers
 }
 
-func generateRandomInt(lower int, upper int) int {
-	l := int64(lower)
-	u := int64(upper)
-	max := big.NewInt(u - l)
-	r, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		fmt.Println("Couldn't generate random int!")
+func initServer(id string, db *db.DB) *server {
+	configFilename := "config.txt"
+	config := readConfig(configFilename)
+	server := &server{
+		id:                  id,
+		state:               "follower",
+		term:                0,
+		votedFor:            "",
+		db:                  *db,
+		electionTimeout:     *createRandomTimeout(150, 300, time.Millisecond),
+		heartbeatTimeout:    *createRandomTimeout(150, 300, time.Millisecond),
+		config:              config,
+		commitIndex:         0,
+		lastApplied:         0,
+		nextIndex:           make([]int, len(config)),
+		matchIndex:          make([]int, len(config)),
+		voteRequests:        make(chan voteRequest),
+		appendEntryRequests: make(chan appendEntryRequest),
 	}
-	return int(l + r.Int64())
-}
-
-func initServer(ip string, db *db.DB) *server {
-	state := "follower"
-	term := 0
-	electionTimeoutPeriod := generateRandomInt(150, 300) * time.Millisecond
-	heartbeatTimeoutPeriod := generateRandomInt(150, 300) * time.Millisecond
-	electionTimeout := createTimeout(electionTimeoutPeriod)
-	heartbeatTimeout := createTimeout(heartbeatTimeoutPeriod)
-	config := readConfig("config.txt")
-	voteChan := make(chan voteRequest)
-	appendChan := make(chan appendEntryRequest)
-	server := &server{ip, state, term, *db, *electionTimeout, *heartbeatTimeout, config, voteChan, appendChan}
 	go server.listener()
 	return server
 }

@@ -83,17 +83,17 @@ func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
 	} else if s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
 		req.returnChan <- false
 	} else {
-		if s.db.Log[req.index].term != req.term {
-			s.db.Log.Entries = s.db.Log.Entries[:req.index]
+		if s.db.Log.Entries[req.prevLogIndex+1].Term != req.term {
+			s.db.Log.Entries = s.db.Log.Entries[:req.prevLogIndex]
 			s.db.Log.setEntries()
 		}
 		s.db.Log = s.db.Log.appendEntry(req.entry)
 		if req.leaderCommit < s.commitIndex {
 			// Set commit index to the min of the leader's commit index and index of last new entry
-			if req.leaderCommit < req.entry.index {
+			if req.leaderCommit < req.prevLogIndex+1 {
 				s.commitIndex = req.leaderCommit
 			} else {
-				s.commitIndex = req.entry.index
+				s.commitIndex = req.prevLogIndex + 1
 			}
 		}
 		req.returnChan <- true

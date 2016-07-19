@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
 type voteRequest struct {
@@ -25,48 +27,50 @@ type voteResponse struct {
 }
 
 func (s *server) handleRequestForVote(req voteRequest) {
-	if request.term < s.term {
+	if req.term < s.term {
 		req.returnChan <- false
 	} else {
 		cond1 := s.votedFor == ""
-		cond2 := s.votedFor == request.candidateID
-		cond3 := request.lastLogIndex >= len(s.log)
+		cond2 := s.votedFor == req.candidateId
+		cond3 := req.lastLogIndex >= len(s.db.Log.Entries)
 		if (cond1 || cond2) && cond3 {
 			s.electionTimeout.resetTimeout()
-			s.votedFor = request.candidateID
-			s.term = request.term
-			fmt.Fprint(w, true)
+			s.votedFor = req.candidateId
+			s.term = req.term
+			req.returnChan <- true
 		}
 	}
 }
 
-func (s *server) sendRequestForVote(receiver string, respChan chan requestForVoteResponse) {
+func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteResponse) {
+	receiver := s.config[receiverIndex]
+	lastLogIndex := len(s.db.Log.Entries)
+	lastLogTerm := s.db.Log.Entries[lastLogIndex-1].Term
 	v := url.Values{}
-	v.set("candidateID", s.id)
-	v.set("term", s.term)
-	v.set("lastLogIndex", len(s.db.log))
-	v.set("lastLogTerm", s.db.log[len(s.db.log)-1].term)
-	resp, err := http.PostForm(server+"/votes", v)
+	v.Set("candidateID", s.id)
+	v.Set("term", strconv.Itoa(s.term))
+	v.Set("lastLogIndex", strconv.Itoa(lastLogIndex))
+	v.Set("lastLogTerm", strconv.Itoa(lastLogTerm))
+	resp, err := http.PostForm(receiver+"/votes", v)
 	if err != nil {
-		fmt.Println("Couldn't send request for votes to " + server)
+		fmt.Println("Couldn't send request for votes to " + receiver)
 	}
 	defer resp.Body.Close()
-	r = &requestForVoteResponse{}
+	r := &requestForVoteResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
-	v = &VoteResponse{receiver, r}
-	respChan <- v
+	voteResp := &voteResponse{receiverIndex, *r}
+	respChan <- *voteResp
 }
 
-func (server *server) startElection() {
-	server.state = "candidate"
-	server.term += 1
-	server.term.votes += 1
-	respChan = make(chan voteResponse)
-	for receiverIndex, _ := range server.config {
-		go server.sendRequestForVotes(receiverIndex)
+func (s *server) startElection() {
+	s.state = "candidate"
+	s.term += 1
+	voteCount := 1
+	respChan := make(chan voteResponse)
+	for receiverIndex, _ := range s.config {
+		go s.sendRequestForVote(receiverIndex, respChan)
 	}
-	voteCount = 0
-	responseCount = 0
+	responseCount := 0
 	for {
 		vote := <-respChan
 		responseCount++
