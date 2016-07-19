@@ -71,27 +71,31 @@ func (db *DB) extend(size int) {
 	db.mmap(size)
 }
 
+func (db *DB) write(key string, value string) {
+	db.dataMap[key] = value
+	b, err := json.Marshal(db.dataMap)
+	if err != nil {
+		fmt.Println("Error marshalling db: ", err)
+	}
+	if len(b) > len(db.data) {
+		db.extend(len(b))
+	}
+	copy(db.data, b)
+	s := "SET " + key + ": " + value + "\n"
+	b = append(db.Log.data, []byte(s)...)
+	if len(b) > len(db.Log.data) {
+		db.Log.extend(len(b))
+	}
+	copy(db.Log.data, b)
+}
+
 func (db *DB) listener() {
 	for {
 		select {
 		case writeReq := <-db.writeChan:
 			key := writeReq["key"]
 			value := writeReq["value"]
-			db.dataMap[key] = value
-			b, err := json.Marshal(db.dataMap)
-			if err != nil {
-				fmt.Println("Error marshalling db: ", err)
-			}
-			if len(b) > len(db.data) {
-				db.extend(len(b))
-			}
-			copy(db.data, b)
-			s := "SET " + key + ": " + value + "\n"
-			b = append(db.Log.data, []byte(s)...)
-			if len(b) > len(db.Log.data) {
-				db.Log.extend(len(b))
-			}
-			copy(db.Log.data, b)
+			db.write(key, value)
 
 		case readReq := <-db.readChan:
 			key := readReq.key
