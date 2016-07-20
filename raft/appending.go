@@ -24,21 +24,25 @@ type appendEntryResponse struct {
 	success bool
 }
 
-func (s *server) appendEntry(entry string) {
+func (s *server) appendEntry(command string) {
+	entry := &db.Entry{command, s.term}
+	if command != "" {
+		s.db.Log.AppendEntry(*entry)
+	}
 	for i := 0; i < len(s.config); i++ {
 		if s.config[i] != s.id {
-			go s.sendAppendEntryRequest(i, entry)
+			go s.sendAppendEntryRequest(i, *entry)
 		}
 	}
 }
 
-func (s *server) sendAppendEntryRequest(followerIndex int, entry string) {
+func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry) {
 	follower := s.config[followerIndex]
 	v := url.Values{}
 	v.Set("term", strconv.Itoa(s.term))
 	v.Set("leaderID", s.id)
 	v.Set("prevLogIndex", strconv.Itoa(len(s.db.Log.Entries)))
-	v.Set("entry", entry)
+	v.Set("entry", entry.Command)
 	v.Set("leaderCommit", strconv.Itoa(s.commitIndex))
 	resp, err := http.PostForm(follower+"/appendEntry", v)
 	if err != nil {
