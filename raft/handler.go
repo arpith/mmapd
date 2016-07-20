@@ -3,6 +3,7 @@ package raft
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/arpith/mmapd/db"
 	"github.com/julienschmidt/httprouter"
 	"net/http"
 )
@@ -31,28 +32,28 @@ func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps
 	switch r.Method {
 	case "GET":
 		key := ps.ByName("key")
-		c := make(chan returnChanMessage)
+		c := make(chan db.ReturnChanMessage)
 		m := readRequest{key, c}
 		s.readRequests <- m
 		resp := <-c
 		close(c)
-		if resp.err != nil {
+		if resp.Err != nil {
 			http.NotFound(w, r)
 		} else {
-			fmt.Fprint(w, resp.json)
+			fmt.Fprint(w, resp.Json)
 		}
 	case "POST":
 		key := ps.ByName("key")
 		value := r.FormValue("value")
-		c := make(chan returnChanMessage)
+		c := make(chan db.ReturnChanMessage)
 		m := writeRequest{key, value, c}
 		s.writeRequests <- m
 		resp := <-c
 		close(c)
-		if resp.err != nil {
-			fmt.Fprint(w, resp.err)
+		if resp.Err != nil {
+			fmt.Fprint(w, resp.Err)
 		} else {
-			fmt.Fprint(w, resp.json)
+			fmt.Fprint(w, resp.Json)
 		}
 	}
 }

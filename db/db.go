@@ -8,14 +8,14 @@ import (
 	"syscall"
 )
 
-type returnChanMessage struct {
-	err  error
-	json string
+type ReturnChanMessage struct {
+	Err  error
+	Json string
 }
 
-type readChanMessage struct {
-	key        string
-	returnChan chan returnChanMessage
+type ReadChanMessage struct {
+	Key        string
+	ReturnChan chan ReturnChanMessage
 }
 
 type DB struct {
@@ -25,8 +25,8 @@ type DB struct {
 	fd        int
 	filename  string
 	file      *os.File
-	writeChan chan map[string]string
-	readChan  chan readChanMessage
+	WriteChan chan map[string]string
+	ReadChan  chan ReadChanMessage
 }
 
 func (db *DB) load() {
@@ -92,19 +92,19 @@ func (db *DB) write(key string, value string) {
 func (db *DB) listener() {
 	for {
 		select {
-		case writeReq := <-db.writeChan:
+		case writeReq := <-db.WriteChan:
 			key := writeReq["key"]
 			value := writeReq["value"]
 			db.write(key, value)
 
-		case readReq := <-db.readChan:
-			key := readReq.key
-			returnChan := readReq.returnChan
+		case readReq := <-db.ReadChan:
+			key := readReq.Key
+			returnChan := readReq.ReturnChan
 			if value, ok := db.dataMap[key]; ok {
-				m := &returnChanMessage{nil, value}
+				m := &ReturnChanMessage{nil, value}
 				returnChan <- *m
 			} else {
-				m := &returnChanMessage{errors.New("Invalid Key"), ""}
+				m := &ReturnChanMessage{errors.New("Invalid Key"), ""}
 				returnChan <- *m
 			}
 		}
@@ -114,7 +114,7 @@ func (db *DB) listener() {
 func Init(dbFilename string, logFilename string) *DB {
 	log := initLog(logFilename)
 	writeChan := make(chan map[string]string, 250)
-	readChan := make(chan readChanMessage)
+	readChan := make(chan ReadChanMessage)
 	dataMap := make(map[string]string)
 	var data []byte
 	var fd int
