@@ -1,11 +1,7 @@
-package db
+package raft
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"syscall"
 )
 
 type returnChanMessage struct {
@@ -25,7 +21,9 @@ type writeRequest struct {
 }
 
 func (s *server) handleReadRequest(req readRequest) {
+	fmt.Println("Got read request")
 }
 
 func (s *server) handleWriteRequest(req writeRequest) {
+	fmt.Println("Got write request")
 }

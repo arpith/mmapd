@@ -73,18 +73,20 @@ func (s *server) startElection() {
 		}
 	}
 	responseCount := 0
-	for {
-		vote := <-respChan
-		responseCount++
-		if vote.resp.hasGrantedVote {
-			voteCount++
-		}
-		if voteCount > len(s.config)/2 {
-			s.state = "leader"
-			break
-		}
-		if responseCount == len(s.config) {
-			break
+	if len(s.config) > 1 {
+		for {
+			vote := <-respChan
+			responseCount++
+			if vote.resp.hasGrantedVote {
+				voteCount++
+			}
+			if voteCount > len(s.config)/2 {
+				s.state = "leader"
+				break
+			}
+			if responseCount == len(s.config) {
+				break
+			}
 		}
 	}
 }

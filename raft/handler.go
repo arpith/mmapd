@@ -28,12 +28,11 @@ func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, p
 }
 
 func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	fmt.Println("Haven't figured this out yet!")
 	switch r.Method {
 	case "GET":
 		key := ps.ByName("key")
 		c := make(chan returnChanMessage)
-		m := readChanMessage{key, c}
+		m := readRequest{key, c}
 		s.readRequests <- m
 		resp := <-c
 		close(c)
@@ -43,11 +42,18 @@ func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps
 			fmt.Fprint(w, resp.json)
 		}
 	case "POST":
-		m := make(map[string]string)
-		m["key"] = ps.ByName("key")
-		m["value"] = r.FormValue("value")
+		key := ps.ByName("key")
+		value := r.FormValue("value")
+		c := make(chan returnChanMessage)
+		m := writeRequest{key, value, c}
 		s.writeRequests <- m
-		fmt.Fprint(w, r.FormValue("value"))
+		resp := <-c
+		close(c)
+		if resp.err != nil {
+			fmt.Fprint(w, resp.err)
+		} else {
+			fmt.Fprint(w, resp.json)
+		}
 	}
 }
 
