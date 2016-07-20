@@ -18,6 +18,12 @@ type ReadChanMessage struct {
 	ReturnChan chan ReturnChanMessage
 }
 
+type WriteChanMessage struct {
+	Key        string
+	Value      string
+	ReturnChan chan ReturnChanMessage
+}
+
 type DB struct {
 	data      []byte
 	dataMap   map[string]string
@@ -25,7 +31,7 @@ type DB struct {
 	fd        int
 	filename  string
 	file      *os.File
-	WriteChan chan map[string]string
+	WriteChan chan WriteChanMessage
 	ReadChan  chan ReadChanMessage
 }
 
@@ -71,7 +77,7 @@ func (db *DB) extend(size int) {
 	db.mmap(size)
 }
 
-func (db *DB) write(key string, value string) {
+func (db *DB) write(key string, value string, returnChan chan ReturnChanMessage) {
 	db.dataMap[key] = value
 	b, err := json.Marshal(db.dataMap)
 	if err != nil {
@@ -81,21 +87,18 @@ func (db *DB) write(key string, value string) {
 		db.extend(len(b))
 	}
 	copy(db.data, b)
-	s := "SET " + key + ": " + value + "\n"
-	b = append(db.Log.data, []byte(s)...)
-	if len(b) > len(db.Log.data) {
-		db.Log.extend(len(b))
-	}
-	copy(db.Log.data, b)
+	m := &ReturnChanMessage{Err: nil, Json: value}
+	returnChan <- *m
 }
 
 func (db *DB) listener() {
 	for {
 		select {
 		case writeReq := <-db.WriteChan:
-			key := writeReq["key"]
-			value := writeReq["value"]
-			db.write(key, value)
+			key := writeReq.Key
+			value := writeReq.Value
+			returnChan := writeReq.ReturnChan
+			db.write(key, value, returnChan)
 
 		case readReq := <-db.ReadChan:
 			key := readReq.Key
@@ -113,7 +116,7 @@ func (db *DB) listener() {
 
 func Init(dbFilename string, logFilename string) *DB {
 	log := initLog(logFilename)
-	writeChan := make(chan map[string]string, 250)
+	writeChan := make(chan WriteChanMessage)
 	readChan := make(chan ReadChanMessage)
 	dataMap := make(map[string]string)
 	var data []byte

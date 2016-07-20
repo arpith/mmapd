@@ -21,9 +21,10 @@ func (db *DB) handler(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 			fmt.Fprint(w, resp.Json)
 		}
 	case "POST":
-		m := make(map[string]string)
-		m["key"] = ps.ByName("key")
-		m["value"] = r.FormValue("value")
+		key := ps.ByName("key")
+		value := ps.ByName("value")
+		c := make(chan ReturnChanMessage)
+		m := WriteChanMessage{key, value, c}
 		db.WriteChan <- m
 		fmt.Fprint(w, r.FormValue("value"))
 	}

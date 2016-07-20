@@ -39,7 +39,8 @@ func (s *server) listener() {
 		case w := <-s.writeRequests:
 			s.handleWriteRequest(w)
 		case <-s.heartbeatTimeout.ticker:
-			s.appendEntry("")
+			c := make(chan bool)
+			s.appendEntry("", c)
 		case <-s.electionTimeout.ticker:
 			s.startElection()
 		}

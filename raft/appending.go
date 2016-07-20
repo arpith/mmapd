@@ -24,19 +24,56 @@ type appendEntryResponse struct {
 	success bool
 }
 
-func (s *server) appendEntry(command string) {
+type followerResponse struct {
+	serverIndex int
+	resp        appendEntryResponse
+}
+
+func (s *server) appendEntry(command string, isCommitted chan bool) {
 	entry := &db.Entry{command, s.term}
+	index := -1
 	if command != "" {
 		s.db.Log.AppendEntry(*entry)
+		index = len(s.db.Log.Entries)
 	}
+	respChan := make(chan followerResponse)
 	for i := 0; i < len(s.config); i++ {
 		if s.config[i] != s.id {
-			go s.sendAppendEntryRequest(i, *entry)
+			go s.sendAppendEntryRequest(i, *entry, respChan)
+		}
+	}
+	responseCount := 0
+	if len(s.config) > 1 {
+		for {
+			_ = <-respChan
+			responseCount++
+			for N := s.commitIndex + 1; N < len(s.db.Log.Entries); N++ {
+				//Check if there exists an N > commitIndex
+				count := 0
+				for i := 0; i < len(s.matchIndex); i++ {
+					if s.matchIndex[i] >= N {
+						count++
+					}
+				}
+				// Check if a majority of matchIndex[i] >= N
+				cond1 := count > len(s.matchIndex)/2
+				// Check if log[N].term == currentTerm
+				cond2 := s.db.Log.Entries[N].Term == s.term
+				if cond1 && cond2 {
+					// Set commitIndex to N
+					s.commitIndex = N
+				} else {
+					break
+				}
+			}
+			if s.commitIndex == index {
+				isCommitted <- true
+			}
 		}
 	}
 }
 
-func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry) {
+func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respChan chan followerResponse) {
 	follower := s.config[followerIndex]
 	v := url.Values{}
 	v.Set("term", strconv.Itoa(s.term))
@@ -50,6 +87,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry) {
 	}
 	r := &appendEntryResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
+	defer resp.Body.Close()
 	if r.term > s.term {
 		s.term = r.term
 		s.state = "follower"
@@ -59,28 +97,11 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry) {
 		s.term = r.term
 		s.nextIndex[followerIndex]++
 		s.matchIndex[followerIndex]++
+		followerResp := &followerResponse{followerIndex, *r}
+		respChan <- *followerResp
 	} else {
 		s.nextIndex[followerIndex]--
-		go s.sendAppendEntryRequest(followerIndex, entry)
-	}
-	defer resp.Body.Close()
-	for N := s.commitIndex + 1; N < len(s.db.Log.Entries); N++ {
-		//Check if there exists an N > commitIndex
-		count := 0
-		for i := 0; i < len(s.matchIndex); i++ {
-			if s.matchIndex[i] >= N {
-				count++
-			}
-			// Check if a majority of matchIndex[i] >= N
-			cond1 := count > len(s.matchIndex)/2
-			// Check if log[N].term == currentTerm
-			cond2 := s.db.Log.Entries[N].Term == s.term
-			if cond1 && cond2 {
-				// Set commitIndex to N
-				s.commitIndex = N
-				break
-			}
-		}
+		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 	}
 }
 
