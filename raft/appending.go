@@ -89,6 +89,8 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	resp, err := http.PostForm(follower+"/appendEntry", v)
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
+		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		return
 	}
 	r := &appendEntryResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
