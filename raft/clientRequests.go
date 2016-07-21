@@ -48,7 +48,9 @@ func (s *server) handleWriteRequest(req writeRequest) {
 	value := req.value
 	command := "SET " + key + " " + value
 	c := make(chan bool)
+	fmt.Println("Going to append entry")
 	s.appendEntry(command, c)
+	fmt.Println("Waiting for response from server")
 	<-c
 	m := db.WriteChanMessage{key, value, req.returnChan}
 	fmt.Println("Sending write request to db")
