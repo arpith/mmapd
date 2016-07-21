@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"fmt"
 	"github.com/arpith/mmapd/db"
 )
 
