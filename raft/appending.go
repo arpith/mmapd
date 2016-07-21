@@ -33,12 +33,10 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 	entry := &db.Entry{command, s.term}
 	index := -1
 	if command != "" {
-		fmt.Println("Going to append entry to log")
 		s.db.Log.AppendEntry(*entry)
 		index = len(s.db.Log.Entries)
 	}
 	respChan := make(chan followerResponse)
-	fmt.Println("Going to send append entry requests")
 	for i := 0; i < len(s.config); i++ {
 		if s.config[i] != s.id {
 			go s.sendAppendEntryRequest(i, *entry, respChan)
@@ -47,7 +45,6 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 	responseCount := 0
 	if len(s.config) > 1 {
 		for {
-			fmt.Println("Waiting for responses to append entry requests")
 			_ = <-respChan
 			responseCount++
 			for N := s.commitIndex + 1; N < len(s.db.Log.Entries); N++ {
@@ -63,7 +60,6 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 				// Check if log[N].term == currentTerm
 				cond2 := s.db.Log.Entries[N].Term == s.term
 				if cond1 && cond2 {
-					fmt.Println("updating commit index")
 					// Set commitIndex to N
 					s.commitIndex = N
 				} else {
@@ -71,9 +67,13 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 				}
 			}
 			if s.commitIndex == index {
-				fmt.Println("Entry can be committed")
 				isCommitted <- true
 			}
+		}
+	} else {
+		if command != "" {
+			s.commitIndex++
+			isCommitted <- true
 		}
 	}
 }
