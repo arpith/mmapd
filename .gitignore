@@ -1,4 +1,4 @@
-db.json
-log.json
+db*.json
+log*.json
 config.json
 mmapd
