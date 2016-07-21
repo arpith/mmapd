@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/arpith/mmapd/db"
 	"github.com/arpith/mmapd/raft"
 	"github.com/julienschmidt/httprouter"
@@ -25,9 +26,14 @@ func main() {
 	router.GET("/get/:key", clientRequestHandler)
 	router.POST("/set/:key", clientRequestHandler)
 
-	port := strings.TrimSpace(os.Getenv("PORT"))
-	if port == "" {
-		port = "3001"
+	portPtr := flag.String("port", "3001", "port to listen on")
+	flag.Parse()
+	port := *portPtr
+	if port == "3001" {
+		envPort := strings.TrimSpace(os.Getenv("PORT"))
+		if envPort != "" {
+			port = envPort
+		}
 	}
 
 	http.ListenAndServe(":"+port, router)
