@@ -11,11 +11,23 @@ import (
 )
 
 func main() {
-	dbFilename := "db.json"
-	logFilename := "log.json"
-	configFilename := "config.json"
-	DB := db.Init(dbFilename, logFilename)
-	server := raft.Init("10.0.17.176", configFilename, DB)
+	dbFilenamePtr := flag.String("db", "db.json", "database filename")
+	logFilenamePtr := flag.String("log", "log.json", "log filename")
+	configFilenamePtr := flag.String("config", "config.json", "config file name")
+	portPtr := flag.String("port", "3001", "port to listen on")
+	ipPtr := flag.String("ip", "localhost", "ip that the server is running on")
+	flag.Parse()
+
+	port := *portPtr
+	if port == "3001" {
+		envPort := strings.TrimSpace(os.Getenv("PORT"))
+		if envPort != "" {
+			port = envPort
+		}
+	}
+
+	DB := db.Init(*dbFilenamePtr, *logFilenamePtr)
+	server := raft.Init(*ipPtr+port, *configFilenamePtr, DB)
 	appendEntryHandler := raft.NewHandler(server, "Append Entry")
 	requestForVoteHandler := raft.NewHandler(server, "Request For Vote")
 	clientRequestHandler := raft.NewHandler(server, "Client Request")
@@ -25,16 +37,6 @@ func main() {
 	router.POST("/votes", requestForVoteHandler)
 	router.GET("/get/:key", clientRequestHandler)
 	router.POST("/set/:key", clientRequestHandler)
-
-	portPtr := flag.String("port", "3001", "port to listen on")
-	flag.Parse()
-	port := *portPtr
-	if port == "3001" {
-		envPort := strings.TrimSpace(os.Getenv("PORT"))
-		if envPort != "" {
-			port = envPort
-		}
-	}
 
 	http.ListenAndServe(":"+port, router)
 }
