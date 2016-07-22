@@ -13,7 +13,7 @@ type voteRequest struct {
 	candidateId  string
 	lastLogIndex int
 	lastLogTerm  int
-	returnChan   chan bool
+	returnChan   chan requestForVoteResponse
 }
 
 type requestForVoteResponse struct {
@@ -28,7 +28,8 @@ type voteResponse struct {
 
 func (s *server) handleRequestForVote(req voteRequest) {
 	if req.term < s.term {
-		req.returnChan <- false
+		resp := &requestForVoteResponse{s.term, false}
+		req.returnChan <- *resp
 	} else {
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == req.candidateId
@@ -37,7 +38,8 @@ func (s *server) handleRequestForVote(req voteRequest) {
 			s.electionTimeout.reset()
 			s.votedFor = req.candidateId
 			s.term = req.term
-			req.returnChan <- true
+			resp := &requestForVoteResponse{s.term, true}
+			req.returnChan <- *resp
 		}
 	}
 }

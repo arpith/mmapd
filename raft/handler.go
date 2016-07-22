@@ -16,6 +16,9 @@ func (s *server) appendEntryHandler(w http.ResponseWriter, r *http.Request, ps h
 		fmt.Println("Error decoding request: ", err)
 	}
 	s.appendEntryRequests <- req
+	resp := <-req.returnChan
+	defer close(req.returnChan)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -26,6 +29,9 @@ func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, p
 		fmt.Println("Error decoding request: ", err)
 	}
 	s.voteRequests <- req
+	resp := <-req.returnChan
+	defer close(req.returnChan)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

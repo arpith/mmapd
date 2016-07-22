@@ -31,17 +31,21 @@ func (s *server) listener() {
 	for {
 		select {
 		case v := <-s.voteRequests:
+			fmt.Println("Got vote request")
 			s.handleRequestForVote(v)
 		case e := <-s.appendEntryRequests:
+			fmt.Println("Got append entry request")
 			s.handleAppendEntryRequest(e)
 		case r := <-s.readRequests:
 			s.handleReadRequest(r)
 		case w := <-s.writeRequests:
 			s.handleWriteRequest(w)
 		case <-s.heartbeatTimeout.ticker:
+			fmt.Println("Going to send heartbeats")
 			c := make(chan bool)
 			s.appendEntry("", c)
 		case <-s.electionTimeout.ticker:
+			fmt.Println("Going to start election")
 			s.startElection()
 		}
 	}
