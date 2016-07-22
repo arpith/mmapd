@@ -122,7 +122,7 @@ func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
 	if req.term < s.term {
 		resp := &appendEntryResponse{s.term, false}
 		req.returnChan <- *resp
-	} else if s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
+	} else if len(s.db.Log.Entries) > req.prevLogIndex && s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
 		resp := &appendEntryResponse{s.term, false}
 		req.returnChan <- *resp
 	} else {
