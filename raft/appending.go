@@ -89,7 +89,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	resp, err := http.PostForm("http://"+follower+"/appendEntry", v)
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to "+follower, err)
-		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 		return
 	}
 	r := &appendEntryResponse{}
@@ -108,7 +108,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		respChan <- *followerResp
 	} else {
 		s.nextIndex[followerIndex]--
-		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 	}
 }
 
