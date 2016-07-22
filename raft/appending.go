@@ -94,7 +94,11 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 	} else {
 		r := &appendEntryResponse{}
-		json.NewDecoder(resp.Body).Decode(r)
+		err := json.NewDecoder(resp.Body).Decode(r)
+		if err != nil {
+			fmt.Println("Couldn't decode response from " + s.config[followerIndex])
+			return
+		}
 		defer resp.Body.Close()
 		if r.term > s.term {
 			s.term = r.term

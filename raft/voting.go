@@ -63,7 +63,11 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 		return
 	} else {
 		r := &requestForVoteResponse{}
-		json.NewDecoder(resp.Body).Decode(r)
+		err := json.NewDecoder(resp.Body).Decode(r)
+		if err != nil {
+			fmt.Println("Couldn't decode request for vote response from ", s.config[receiverIndex])
+			return
+		}
 		defer resp.Body.Close()
 		voteResp := &voteResponse{receiverIndex, *r}
 		respChan <- *voteResp
