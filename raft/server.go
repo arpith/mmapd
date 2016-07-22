@@ -43,10 +43,10 @@ func (s *server) listener() {
 		case <-s.heartbeatTimeout.ticker:
 			fmt.Println("Going to send heartbeats")
 			c := make(chan bool)
-			s.appendEntry("", c)
+			go s.appendEntry("", c)
 		case <-s.electionTimeout.ticker:
 			fmt.Println("Going to start election")
-			s.startElection()
+			go s.startElection()
 		}
 	}
 }

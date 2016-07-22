@@ -13,7 +13,8 @@ func (s *server) appendEntryHandler(w http.ResponseWriter, r *http.Request, ps h
 	var req appendEntryRequest
 	err := decoder.Decode(&req)
 	if err != nil {
-		fmt.Println("Error decoding request: ", err)
+		fmt.Println("Error decoding request to append entry: ", err)
+		fmt.Println(r.Body)
 	}
 	s.appendEntryRequests <- req
 	resp := <-req.returnChan
@@ -26,7 +27,8 @@ func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, p
 	var req voteRequest
 	err := decoder.Decode(&req)
 	if err != nil {
-		fmt.Println("Error decoding request: ", err)
+		fmt.Println("Error decoding request for vote: ", err)
+		fmt.Println(r.Body)
 	}
 	s.voteRequests <- req
 	resp := <-req.returnChan

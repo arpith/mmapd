@@ -96,7 +96,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		r := &appendEntryResponse{}
 		err := json.NewDecoder(resp.Body).Decode(r)
 		if err != nil {
-			fmt.Println("Couldn't decode response from " + s.config[followerIndex])
+			fmt.Println("Couldn't decode append entries response from " + s.config[followerIndex])
 			return
 		}
 		defer resp.Body.Close()
