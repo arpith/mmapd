@@ -45,19 +45,22 @@ func (s *server) handleRequestForVote(req voteRequest) {
 func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteResponse) {
 	receiver := s.config[receiverIndex]
 	lastLogIndex := len(s.db.Log.Entries)
-	lastLogTerm := s.db.Log.Entries[lastLogIndex-1].Term
+	lastLogTerm := 0
+	if lastLogIndex > 0 {
+		lastLogTerm = s.db.Log.Entries[lastLogIndex-1].Term
+	}
 	v := url.Values{}
 	v.Set("candidateID", s.id)
 	v.Set("term", strconv.Itoa(s.term))
 	v.Set("lastLogIndex", strconv.Itoa(lastLogIndex))
 	v.Set("lastLogTerm", strconv.Itoa(lastLogTerm))
-	resp, err := http.PostForm(receiver+"/votes", v)
+	resp, err := http.PostForm("http://"+receiver+"/votes", v)
 	if err != nil {
 		fmt.Println("Couldn't send request for votes to " + receiver)
 	}
-	defer resp.Body.Close()
 	r := &requestForVoteResponse{}
 	json.NewDecoder(resp.Body).Decode(r)
+	defer resp.Body.Close()
 	voteResp := &voteResponse{receiverIndex, *r}
 	respChan <- *voteResp
 }

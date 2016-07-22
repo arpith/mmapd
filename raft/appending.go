@@ -86,9 +86,9 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	v.Set("prevLogIndex", strconv.Itoa(len(s.db.Log.Entries)))
 	v.Set("entry", entry.Command)
 	v.Set("leaderCommit", strconv.Itoa(s.commitIndex))
-	resp, err := http.PostForm(follower+"/appendEntry", v)
+	resp, err := http.PostForm("http://"+follower+"/appendEntry", v)
 	if err != nil {
-		fmt.Println("Couldn't send append entry request to " + follower)
+		fmt.Println("Couldn't send append entry request to "+follower, err)
 		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 		return
 	}
