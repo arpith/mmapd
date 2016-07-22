@@ -57,12 +57,13 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 	resp, err := http.PostForm("http://"+receiver+"/votes", v)
 	if err != nil {
 		fmt.Println("Couldn't send request for votes to " + receiver)
+	} else {
+		r := &requestForVoteResponse{}
+		json.NewDecoder(resp.Body).Decode(r)
+		defer resp.Body.Close()
+		voteResp := &voteResponse{receiverIndex, *r}
+		respChan <- *voteResp
 	}
-	r := &requestForVoteResponse{}
-	json.NewDecoder(resp.Body).Decode(r)
-	defer resp.Body.Close()
-	voteResp := &voteResponse{receiverIndex, *r}
-	respChan <- *voteResp
 }
 
 func (s *server) startElection() {
