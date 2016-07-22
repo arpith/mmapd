@@ -26,8 +26,10 @@ func main() {
 		}
 	}
 
+	id := *ipPtr + ":" + port
+
 	DB := db.Init(*dbFilenamePtr, *logFilenamePtr)
-	server := raft.Init(*ipPtr+port, *configFilenamePtr, DB)
+	server := raft.Init(id, *configFilenamePtr, DB)
 	appendEntryHandler := raft.NewHandler(server, "Append Entry")
 	requestForVoteHandler := raft.NewHandler(server, "Request For Vote")
 	clientRequestHandler := raft.NewHandler(server, "Client Request")
