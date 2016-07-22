@@ -88,27 +88,29 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	v.Set("leaderCommit", strconv.Itoa(s.commitIndex))
 	resp, err := http.PostForm("http://"+follower+"/append", v)
 	if err != nil {
-		fmt.Println("Couldn't send append entry request to "+follower, err)
-		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		fmt.Println("Couldn't send append entry request to " + follower)
+		fmt.Println(err)
 		return
-	}
-	r := &appendEntryResponse{}
-	json.NewDecoder(resp.Body).Decode(r)
-	defer resp.Body.Close()
-	if r.term > s.term {
-		s.term = r.term
-		s.state = "follower"
-		s.electionTimeout.reset()
-	}
-	if r.success {
-		s.term = r.term
-		s.nextIndex[followerIndex]++
-		s.matchIndex[followerIndex]++
-		followerResp := &followerResponse{followerIndex, *r}
-		respChan <- *followerResp
-	} else {
-		s.nextIndex[followerIndex]--
 		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+	} else {
+		r := &appendEntryResponse{}
+		json.NewDecoder(resp.Body).Decode(r)
+		defer resp.Body.Close()
+		if r.term > s.term {
+			s.term = r.term
+			s.state = "follower"
+			s.electionTimeout.reset()
+		}
+		if r.success {
+			s.term = r.term
+			s.nextIndex[followerIndex]++
+			s.matchIndex[followerIndex]++
+			followerResp := &followerResponse{followerIndex, *r}
+			respChan <- *followerResp
+		} else {
+			s.nextIndex[followerIndex]--
+			//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		}
 	}
 }
 
