@@ -9,37 +9,37 @@ import (
 )
 
 type voteRequest struct {
-	term         int
-	candidateId  string
-	lastLogIndex int
-	lastLogTerm  int
-	returnChan   chan requestForVoteResponse
+	Term         int
+	CandidateID  string
+	LastLogIndex int
+	LastLogTerm  int
+	ReturnChan   chan requestForVoteResponse
 }
 
 type requestForVoteResponse struct {
-	term           int
-	hasGrantedVote bool
+	Term           int
+	HasGrantedVote bool
 }
 
 type voteResponse struct {
-	serverIndex int
-	resp        requestForVoteResponse
+	ServerIndex int
+	Resp        requestForVoteResponse
 }
 
 func (s *server) handleRequestForVote(req voteRequest) {
-	if req.term < s.term {
+	if req.Term < s.term {
 		resp := &requestForVoteResponse{s.term, false}
-		req.returnChan <- *resp
+		req.ReturnChan <- *resp
 	} else {
 		cond1 := s.votedFor == ""
-		cond2 := s.votedFor == req.candidateId
-		cond3 := req.lastLogIndex >= len(s.db.Log.Entries)
+		cond2 := s.votedFor == req.CandidateID
+		cond3 := req.LastLogIndex >= len(s.db.Log.Entries)
 		if (cond1 || cond2) && cond3 {
 			s.electionTimeout.reset()
-			s.votedFor = req.candidateId
-			s.term = req.term
+			s.votedFor = req.CandidateID
+			s.term = req.Term
 			resp := &requestForVoteResponse{s.term, true}
-			req.returnChan <- *resp
+			req.ReturnChan <- *resp
 		}
 	}
 }
@@ -89,7 +89,7 @@ func (s *server) startElection() {
 		for {
 			vote := <-respChan
 			responseCount++
-			if vote.resp.hasGrantedVote {
+			if vote.Resp.HasGrantedVote {
 				voteCount++
 			}
 			if voteCount > len(s.config)/2 {

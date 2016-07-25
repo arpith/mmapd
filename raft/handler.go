@@ -9,30 +9,35 @@ import (
 )
 
 func (s *server) appendEntryHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	decoder := json.NewDecoder(r.Body)
-	var req appendEntryRequest
-	err := decoder.Decode(&req)
-	if err != nil {
-		fmt.Println("Error decoding request to append entry: ", err)
-		fmt.Println(r.Body)
+	returnChan := make(chan appendEntryResponse)
+	req := &appendEntryRequest{
+		Term:         strconv.r.FormValue("term"),
+		LeaderID:     r.FormValue("leaderID"),
+		PrevLogIndex: r.FormValue("prevLogIndex"),
+		Entry:        r.FormValue("entry"),
+		LeaderCommit: r.FormValue("leaderCommit"),
+		ReturnChan:   returnChan,
 	}
 	s.appendEntryRequests <- req
-	resp := <-req.returnChan
-	defer close(req.returnChan)
+	resp := <-req.ReturnChan
+	defer close(req.ReturnChan)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	decoder := json.NewDecoder(r.Body)
-	var req voteRequest
-	err := decoder.Decode(&req)
-	if err != nil {
-		fmt.Println("Error decoding request for vote: ", err)
-		fmt.Println(r.Body)
+	returnChan := make(chan appendEntryResponse)
+	req := &voteRequest{
+		Term:         r.FormValue("term"),
+		CandidateID:  r.FormValue("cadidateID"),
+		LastLogIndex: r.FormValue("lastLogIndex"),
+		LastLogTerm:  r.FormValue("lastLogTerm"),
+		ReturnChan:   returnChan,
 	}
+	s.appendEntryRequests <- req
+
 	s.voteRequests <- req
-	resp := <-req.returnChan
-	defer close(req.returnChan)
+	resp := <-req.ReturnChan
+	defer close(req.ReturnChan)
 	json.NewEncoder(w).Encode(resp)
 }
 

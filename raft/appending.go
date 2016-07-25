@@ -10,23 +10,23 @@ import (
 )
 
 type appendEntryRequest struct {
-	term         int
-	leaderId     string
-	prevLogIndex int
-	prevLogTerm  int
-	entry        db.Entry
-	leaderCommit int
-	returnChan   chan appendEntryResponse
+	Term         int
+	LeaderID     string
+	PrevLogIndex int
+	PrevLogTerm  int
+	Entry        db.Entry
+	LeaderCommit int
+	ReturnChan   chan appendEntryResponse
 }
 
 type appendEntryResponse struct {
-	term    int
-	success bool
+	Term    int
+	Success bool
 }
 
 type followerResponse struct {
-	serverIndex int
-	resp        appendEntryResponse
+	ServerIndex int
+	Resp        appendEntryResponse
 }
 
 func (s *server) appendEntry(command string, isCommitted chan bool) {
@@ -100,13 +100,13 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 			return
 		}
 		defer resp.Body.Close()
-		if r.term > s.term {
-			s.term = r.term
+		if r.Term > s.term {
+			s.term = r.Term
 			s.state = "follower"
 			s.electionTimeout.reset()
 		}
-		if r.success {
-			s.term = r.term
+		if r.Success {
+			s.term = r.Term
 			s.nextIndex[followerIndex]++
 			s.matchIndex[followerIndex]++
 			followerResp := &followerResponse{followerIndex, *r}
@@ -119,28 +119,28 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 }
 
 func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
-	if req.term < s.term {
+	if req.Term < s.term {
 		resp := &appendEntryResponse{s.term, false}
-		req.returnChan <- *resp
-	} else if len(s.db.Log.Entries) > req.prevLogIndex && s.db.Log.Entries[req.prevLogIndex].Term != req.prevLogTerm {
+		req.ReturnChan <- *resp
+	} else if len(s.db.Log.Entries) > req.PrevLogIndex && s.db.Log.Entries[req.PrevLogIndex].Term != req.PrevLogTerm {
 		resp := &appendEntryResponse{s.term, false}
-		req.returnChan <- *resp
+		req.ReturnChan <- *resp
 	} else {
-		if s.db.Log.Entries[req.prevLogIndex+1].Term != req.term {
+		if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
 			// If existing entry conflicts with new entry
 			// Delete entry and all that follow it
-			s.db.Log.SetEntries(s.db.Log.Entries[:req.prevLogIndex])
+			s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
 		}
-		s.db.Log.AppendEntry(req.entry)
-		if req.leaderCommit < s.commitIndex {
+		s.db.Log.AppendEntry(req.Entry)
+		if req.LeaderCommit < s.commitIndex {
 			// Set commit index to the min of the leader's commit index and index of last new entry
-			if req.leaderCommit < req.prevLogIndex+1 {
-				s.commitIndex = req.leaderCommit
+			if req.LeaderCommit < req.PrevLogIndex+1 {
+				s.commitIndex = req.LeaderCommit
 			} else {
-				s.commitIndex = req.prevLogIndex + 1
+				s.commitIndex = req.PrevLogIndex + 1
 			}
 		}
 		resp := &appendEntryResponse{s.term, true}
-		req.returnChan <- *resp
+		req.ReturnChan <- *resp
 	}
 }
