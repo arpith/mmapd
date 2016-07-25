@@ -1,11 +1,10 @@
 package raft
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 )
 
 type requestForVote struct {
@@ -57,12 +56,10 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 	if lastLogIndex > 0 {
 		lastLogTerm = s.db.Log.Entries[lastLogIndex-1].Term
 	}
-	v := url.Values{}
-	v.Set("candidateID", s.id)
-	v.Set("term", strconv.Itoa(s.term))
-	v.Set("lastLogIndex", strconv.Itoa(lastLogIndex))
-	v.Set("lastLogTerm", strconv.Itoa(lastLogTerm))
-	resp, err := http.PostForm("http://"+receiver+"/votes", v)
+	v := &requestForVote{s.term, s.id, lastLogIndex, lastLogTerm}
+	b := new(bytes.Buffer)
+	json.NewEncoder(b).Encode(v)
+	resp, err := http.Post("http://"+receiver+"/votes", "application/json", b)
 	if err != nil {
 		fmt.Println("Couldn't send request for votes to " + receiver)
 		fmt.Println(err)

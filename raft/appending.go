@@ -1,12 +1,11 @@
 package raft
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/arpith/mmapd/db"
 	"net/http"
-	"net/url"
-	"strconv"
 )
 
 type appendEntryRequest struct {
@@ -84,13 +83,12 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 
 func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respChan chan followerResponse) {
 	follower := s.config[followerIndex]
-	v := url.Values{}
-	v.Set("term", strconv.Itoa(s.term))
-	v.Set("leaderID", s.id)
-	v.Set("prevLogIndex", strconv.Itoa(len(s.db.Log.Entries)))
-	v.Set("entry", entry.Command)
-	v.Set("leaderCommit", strconv.Itoa(s.commitIndex))
-	resp, err := http.PostForm("http://"+follower+"/append", v)
+	prevLogIndex := len(s.db.Log.Entries) - 1
+	prevLogTerm := s.db.Log.Entries[prevLogIndex-1].Term
+	a := &appendEntryRequest{s.term, s.id, prevLogIndex, prevLogTerm, entry, s.commitIndex}
+	b := new(bytes.Buffer)
+	json.NewEncoder(b).Encode(a)
+	resp, err := http.Post("http://"+follower+"/append", "application/json", b)
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
 		fmt.Println(err)
