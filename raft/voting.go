@@ -30,7 +30,7 @@ type voteResponse struct {
 }
 
 func (s *server) handleRequestForVote(v voteRequest) {
-	fmt.Println("Got vote request:", v)
+	fmt.Println("Got vote request:", v.Req)
 	req := v.Req
 	returnChan := v.ReturnChan
 	if req.Term < s.term {
@@ -42,6 +42,7 @@ func (s *server) handleRequestForVote(v voteRequest) {
 			fmt.Println("Request term: ", req.Term, " Current term: ", s.term)
 			s.state = "follower"
 			s.votedFor = ""
+			fmt.Println("RESETTING ELECTION TIMEOUT: Got vote request with term greater than current term")
 			s.electionTimeout.reset()
 		}
 		cond1 := s.votedFor == ""

@@ -124,27 +124,28 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 }
 
 func (s *server) handleAppendEntryRequest(a appendRequest) {
-	fmt.Println("Got append entry request: ", a)
+	fmt.Println("Got append entry request: ", a.Req)
 	returnChan := a.ReturnChan
 	req := a.Req
+	if req.Term > s.term {
+		fmt.Println("RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
+		s.electionTimeout.reset()
+	}
 	if req.Term < s.term {
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
-	} else if req.PrevLogIndex == -1 {
-		fmt.Println("RESETTING ELECTION TIMEOUT - got a heartbeat with prevLogIndex -1")
-		s.electionTimeout.reset()
-		resp := &appendEntryResponse{s.term, true}
-		returnChan <- *resp
-	} else if len(s.db.Log.Entries) > req.PrevLogIndex &&
+	} else if req.PrevLogIndex > -1 &&
+		len(s.db.Log.Entries) > req.PrevLogIndex &&
 		s.db.Log.Entries[req.PrevLogIndex].Term != req.PrevLogTerm {
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else {
-		s.electionTimeout.reset()
-		if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
-			// If existing entry conflicts with new entry
-			// Delete entry and all that follow it
-			s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
+		if len(s.db.Log.Entries) > req.PrevLogIndex+2 {
+			if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
+				// If existing entry conflicts with new entry
+				// Delete entry and all that follow it
+				s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
+			}
 		}
 		s.db.Log.AppendEntry(req.Entry)
 		if req.LeaderCommit < s.commitIndex {
