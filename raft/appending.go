@@ -95,8 +95,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
 		fmt.Println(err)
-		return
-		//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 	} else {
 		r := &appendEntryResponse{}
 		err := json.NewDecoder(resp.Body).Decode(r)
@@ -119,7 +118,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 			respChan <- *followerResp
 		} else {
 			s.nextIndex[followerIndex]--
-			//		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+			go s.sendAppendEntryRequest(followerIndex, entry, respChan)
 		}
 	}
 }
