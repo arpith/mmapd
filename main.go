@@ -33,12 +33,14 @@ func main() {
 	appendEntryHandler := raft.NewHandler(server, "Append Entry")
 	requestForVoteHandler := raft.NewHandler(server, "Request For Vote")
 	clientRequestHandler := raft.NewHandler(server, "Client Request")
+	statusRequestHandler := raft.NewHandler(server, "Status Request")
 
 	router := httprouter.New()
 	router.POST("/append", appendEntryHandler)
 	router.POST("/votes", requestForVoteHandler)
 	router.GET("/get/:key", clientRequestHandler)
 	router.POST("/set/:key", clientRequestHandler)
+	router.GET("/status", statusRequestHandler)
 
 	http.ListenAndServe(":"+port, router)
 }

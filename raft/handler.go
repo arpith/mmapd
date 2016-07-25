@@ -74,12 +74,29 @@ func (s *server) clientRequestHandler(w http.ResponseWriter, r *http.Request, ps
 	}
 }
 
+func (s *server) statusRequestHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	status := &status{
+		s.id,
+		s.state,
+		s.term,
+		s.votedFor,
+		s.commitIndex,
+		s.lastApplied,
+		s.nextIndex,
+		s.matchIndex,
+	}
+	fmt.Println(status)
+	json.NewEncoder(w).Encode(*status)
+}
+
 func NewHandler(s *server, handlerType string) func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch handlerType {
 	case "Append Entry":
 		return s.appendEntryHandler
 	case "Request For Vote":
 		return s.requestForVoteHandler
+	case "Status Request":
+		return s.statusRequestHandler
 	default:
 		return s.clientRequestHandler
 	}
