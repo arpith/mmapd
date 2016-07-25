@@ -38,11 +38,10 @@ func (s *server) handleRequestForVote(v voteRequest) {
 		returnChan <- *resp
 	} else {
 		if req.Term > s.term {
-			fmt.Println("SETTING FOLLOWER: Got vote request with term greater than current term")
+			fmt.Println("SETTING FOLLOWER && RESETTING ELECTION TIMEOUT: Got vote request with term greater than current term")
 			fmt.Println("Request term: ", req.Term, " Current term: ", s.term)
 			s.state = "follower"
 			s.votedFor = ""
-			fmt.Println("RESETTING ELECTION TIMEOUT: Got vote request with term greater than current term")
 			s.electionTimeout.reset()
 		}
 		cond1 := s.votedFor == ""
