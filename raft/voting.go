@@ -38,7 +38,7 @@ func (s *server) handleRequestForVote(v voteRequest) {
 	} else {
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == req.CandidateID
-		cond3 := req.LastLogIndex >= len(s.db.Log.Entries)
+		cond3 := req.LastLogIndex >= len(s.db.Log.Entries)-1
 		if (cond1 || cond2) && cond3 {
 			s.electionTimeout.reset()
 			s.votedFor = req.CandidateID
