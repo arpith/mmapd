@@ -128,7 +128,9 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 	returnChan := a.ReturnChan
 	req := a.Req
 	if req.Term > s.term {
-		fmt.Println("RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
+		fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
+		s.term = req.Term
+		s.state = "follower"
 		s.electionTimeout.reset()
 	}
 	if req.Term < s.term {
