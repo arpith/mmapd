@@ -40,6 +40,7 @@ func (s *server) handleRequestForVote(v voteRequest) {
 		cond2 := s.votedFor == req.CandidateID
 		cond3 := req.LastLogIndex >= len(s.db.Log.Entries)-1
 		if (cond1 || cond2) && cond3 {
+			s.state = "follower"
 			s.electionTimeout.reset()
 			s.votedFor = req.CandidateID
 			s.term = req.Term
