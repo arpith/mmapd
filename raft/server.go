@@ -47,8 +47,10 @@ func (s *server) listener() {
 				go s.appendEntry("", c)
 			}
 		case <-s.electionTimeout.ticker:
-			fmt.Println("Going to start election")
-			go s.startElection()
+			if s.state == "follower" {
+				fmt.Println("Going to start election")
+				go s.startElection()
+			}
 		}
 	}
 }
