@@ -51,10 +51,10 @@ func (s *server) handleRequestForVote(v voteRequest) {
 
 func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteResponse) {
 	receiver := s.config[receiverIndex]
-	lastLogIndex := len(s.db.Log.Entries)
+	lastLogIndex := len(s.db.Log.Entries) - 1
 	lastLogTerm := 0
 	if lastLogIndex > 0 {
-		lastLogTerm = s.db.Log.Entries[lastLogIndex-1].Term
+		lastLogTerm = s.db.Log.Entries[lastLogIndex].Term
 	}
 	v := &requestForVote{s.term, s.id, lastLogIndex, lastLogTerm}
 	b := new(bytes.Buffer)

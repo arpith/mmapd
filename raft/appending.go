@@ -84,7 +84,10 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respChan chan followerResponse) {
 	follower := s.config[followerIndex]
 	prevLogIndex := len(s.db.Log.Entries) - 1
-	prevLogTerm := s.db.Log.Entries[prevLogIndex-1].Term
+	prevLogTerm := 0
+	if prevLogIndex > 0 {
+		prevLogTerm = s.db.Log.Entries[prevLogIndex].Term
+	}
 	a := &appendEntryRequest{s.term, s.id, prevLogIndex, prevLogTerm, entry, s.commitIndex}
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(a)
