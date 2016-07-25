@@ -9,33 +9,36 @@ import (
 )
 
 func (s *server) appendEntryHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	returnChan := make(chan appendEntryResponse)
-	req := &appendEntryRequest{
-		Term:         strconv.r.FormValue("term"),
-		LeaderID:     r.FormValue("leaderID"),
-		PrevLogIndex: r.FormValue("prevLogIndex"),
-		Entry:        r.FormValue("entry"),
-		LeaderCommit: r.FormValue("leaderCommit"),
-		ReturnChan:   returnChan,
+	var a appendEntryRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&a)
+	if err != nil {
+		fmt.Println("Couldn't decode append entry request as json", err)
 	}
-	s.appendEntryRequests <- req
+	returnChan := make(chan appendEntryResponse)
+	req := &appendRequest{
+		Req:        a,
+		ReturnChan: returnChan,
+	}
+	s.appendRequests <- *req
 	resp := <-req.ReturnChan
 	defer close(req.ReturnChan)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func (s *server) requestForVoteHandler(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	returnChan := make(chan appendEntryResponse)
-	req := &voteRequest{
-		Term:         r.FormValue("term"),
-		CandidateID:  r.FormValue("cadidateID"),
-		LastLogIndex: r.FormValue("lastLogIndex"),
-		LastLogTerm:  r.FormValue("lastLogTerm"),
-		ReturnChan:   returnChan,
+	var v requestForVote
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&v)
+	if err != nil {
+		fmt.Println("Couldn't decode vote request as json", err)
 	}
-	s.appendEntryRequests <- req
-
-	s.voteRequests <- req
+	returnChan := make(chan requestForVoteResponse)
+	req := &voteRequest{
+		Req:        v,
+		ReturnChan: returnChan,
+	}
+	s.voteRequests <- *req
 	resp := <-req.ReturnChan
 	defer close(req.ReturnChan)
 	json.NewEncoder(w).Encode(resp)

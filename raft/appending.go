@@ -16,7 +16,11 @@ type appendEntryRequest struct {
 	PrevLogTerm  int
 	Entry        db.Entry
 	LeaderCommit int
-	ReturnChan   chan appendEntryResponse
+}
+
+type appendRequest struct {
+	Req        appendEntryRequest
+	ReturnChan chan appendEntryResponse
 }
 
 type appendEntryResponse struct {
@@ -118,13 +122,15 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	}
 }
 
-func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
+func (s *server) handleAppendEntryRequest(a appendRequest) {
+	returnChan := a.ReturnChan
+	req := a.Req
 	if req.Term < s.term {
 		resp := &appendEntryResponse{s.term, false}
-		req.ReturnChan <- *resp
+		returnChan <- *resp
 	} else if len(s.db.Log.Entries) > req.PrevLogIndex && s.db.Log.Entries[req.PrevLogIndex].Term != req.PrevLogTerm {
 		resp := &appendEntryResponse{s.term, false}
-		req.ReturnChan <- *resp
+		returnChan <- *resp
 	} else {
 		if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
 			// If existing entry conflicts with new entry
@@ -141,6 +147,6 @@ func (s *server) handleAppendEntryRequest(req appendEntryRequest) {
 			}
 		}
 		resp := &appendEntryResponse{s.term, true}
-		req.ReturnChan <- *resp
+		returnChan <- *resp
 	}
 }

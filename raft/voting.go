@@ -8,12 +8,16 @@ import (
 	"strconv"
 )
 
-type voteRequest struct {
+type requestForVote struct {
 	Term         int
 	CandidateID  string
 	LastLogIndex int
 	LastLogTerm  int
-	ReturnChan   chan requestForVoteResponse
+}
+
+type voteRequest struct {
+	Req        requestForVote
+	ReturnChan chan requestForVoteResponse
 }
 
 type requestForVoteResponse struct {
@@ -26,10 +30,12 @@ type voteResponse struct {
 	Resp        requestForVoteResponse
 }
 
-func (s *server) handleRequestForVote(req voteRequest) {
+func (s *server) handleRequestForVote(v voteRequest) {
+	req := v.Req
+	returnChan := v.ReturnChan
 	if req.Term < s.term {
 		resp := &requestForVoteResponse{s.term, false}
-		req.ReturnChan <- *resp
+		returnChan <- *resp
 	} else {
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == req.CandidateID
@@ -39,7 +45,7 @@ func (s *server) handleRequestForVote(req voteRequest) {
 			s.votedFor = req.CandidateID
 			s.term = req.Term
 			resp := &requestForVoteResponse{s.term, true}
-			req.ReturnChan <- *resp
+			returnChan <- *resp
 		}
 	}
 }
