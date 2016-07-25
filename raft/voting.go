@@ -30,18 +30,24 @@ type voteResponse struct {
 }
 
 func (s *server) handleRequestForVote(v voteRequest) {
+	fmt.Println("Got vote request:", v)
 	req := v.Req
 	returnChan := v.ReturnChan
 	if req.Term < s.term {
 		resp := &requestForVoteResponse{s.term, false}
 		returnChan <- *resp
 	} else {
+		if req.Term > s.term {
+			fmt.Println("SETTING FOLLOWER: Got vote request with term greater than current term")
+			fmt.Println("Request term: ", req.Term, " Current term: ", s.term)
+			s.state = "follower"
+			s.votedFor = ""
+			s.electionTimeout.reset()
+		}
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == req.CandidateID
 		cond3 := req.LastLogIndex >= len(s.db.Log.Entries)-1
 		if (cond1 || cond2) && cond3 {
-			s.state = "follower"
-			s.electionTimeout.reset()
 			s.votedFor = req.CandidateID
 			s.term = req.Term
 			resp := &requestForVoteResponse{s.term, true}
@@ -62,14 +68,19 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 	json.NewEncoder(b).Encode(v)
 	resp, err := http.Post("http://"+receiver+"/votes", "application/json", b)
 	if err != nil {
+		r := &requestForVoteResponse{0, false}
+		v := &voteResponse{receiverIndex, *r}
 		fmt.Println("Couldn't send request for votes to " + receiver)
 		fmt.Println(err)
-		return
+		respChan <- *v
 	} else {
 		r := &requestForVoteResponse{}
 		err := json.NewDecoder(resp.Body).Decode(r)
 		if err != nil {
+			r := &requestForVoteResponse{0, false}
+			v := &voteResponse{receiverIndex, *r}
 			fmt.Println("Couldn't decode request for vote response from ", s.config[receiverIndex])
+			respChan <- *v
 			return
 		}
 		defer resp.Body.Close()
@@ -79,6 +90,7 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 }
 
 func (s *server) startElection() {
+	fmt.Println("SETTING CANDIDATE: Going to start election")
 	s.state = "candidate"
 	s.term += 1
 	s.votedFor = s.id
@@ -94,14 +106,18 @@ func (s *server) startElection() {
 		for {
 			vote := <-respChan
 			responseCount++
+			fmt.Println("Got vote response", vote)
 			if vote.Resp.HasGrantedVote {
 				voteCount++
 			}
-			if voteCount > len(s.config)/2 {
+			if voteCount > (len(s.config)-1)/2 {
+				fmt.Println("SETTING LEADER: got majority vote")
 				s.state = "leader"
+				fmt.Println("IM THE LEADER :D :D :D :D :D ")
 				break
 			}
-			if responseCount == len(s.config) {
+			if responseCount == len(s.config)-2 {
+				fmt.Println("Got all the responses")
 				break
 			}
 		}

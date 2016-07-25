@@ -106,6 +106,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		}
 		defer resp.Body.Close()
 		if r.Term > s.term {
+			fmt.Println("SETTING FOLLOWER: got append entry RPC with term greater than current term")
 			s.term = r.Term
 			s.state = "follower"
 			s.electionTimeout.reset()
@@ -124,12 +125,15 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 }
 
 func (s *server) handleAppendEntryRequest(a appendRequest) {
+	fmt.Println("Got append entry request: ", a)
 	returnChan := a.ReturnChan
 	req := a.Req
 	if req.Term < s.term {
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else if req.PrevLogIndex == -1 {
+		fmt.Println("RESETTING ELECTION TIMEOUT - got a heartbeat with prevLogIndex -1")
+		s.electionTimeout.reset()
 		resp := &appendEntryResponse{s.term, true}
 		returnChan <- *resp
 	} else if len(s.db.Log.Entries) > req.PrevLogIndex &&
