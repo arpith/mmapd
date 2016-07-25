@@ -41,9 +41,11 @@ func (s *server) listener() {
 		case w := <-s.writeRequests:
 			s.handleWriteRequest(w)
 		case <-s.heartbeatTimeout.ticker:
-			fmt.Println("Going to send heartbeats")
-			c := make(chan bool)
-			go s.appendEntry("", c)
+			if s.state == "leader" {
+				fmt.Println("Going to send heartbeats")
+				c := make(chan bool)
+				go s.appendEntry("", c)
+			}
 		case <-s.electionTimeout.ticker:
 			fmt.Println("Going to start election")
 			go s.startElection()
