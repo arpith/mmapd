@@ -81,6 +81,7 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 func (s *server) startElection() {
 	s.state = "candidate"
 	s.term += 1
+	s.votedFor = s.id
 	voteCount := 1
 	respChan := make(chan voteResponse)
 	for receiverIndex, receiverId := range s.config {
