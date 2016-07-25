@@ -137,7 +137,7 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else {
-		s.db.electionTimeout.reset()
+		s.electionTimeout.reset()
 		if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
 			// If existing entry conflicts with new entry
 			// Delete entry and all that follow it
