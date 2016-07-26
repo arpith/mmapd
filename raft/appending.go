@@ -105,7 +105,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		}
 		defer resp.Body.Close()
 		if r.Term > s.term {
-			fmt.Println("SETTING FOLLOWER: got append entry RPC with term greater than current term")
+			fmt.Println("SETTING FOLLOWER: got append entry RPC response with term greater than current term")
 			s.term = r.Term
 			s.state = "follower"
 			s.electionTimeout.reset()
@@ -127,23 +127,8 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 	fmt.Println("Got append entry request: ", a.Req)
 	returnChan := a.ReturnChan
 	req := a.Req
-	/*
-		if req.Term > s.term {
-			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
-			s.term = req.Term
-			s.state = "follower"
-			s.electionTimeout.reset()
-		}
-	*/
 	if req.Term < s.term {
 		resp := &appendEntryResponse{s.term, false}
-		returnChan <- *resp
-	} else if req.PrevLogIndex == -1 {
-		fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
-		s.term = req.Term
-		s.state = "follower"
-		s.electionTimeout.reset()
-		resp := &appendEntryResponse{s.term, true}
 		returnChan <- *resp
 	} else if req.PrevLogIndex > -1 &&
 		len(s.db.Log.Entries) > req.PrevLogIndex &&
@@ -151,23 +136,38 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else {
-		if len(s.db.Log.Entries) > req.PrevLogIndex+2 {
-			if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
-				// If existing entry conflicts with new entry
-				// Delete entry and all that follow it
-				s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
-			}
+		if req.Term > s.term {
+			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
+			s.term = req.Term
+			s.state = "follower"
+			s.electionTimeout.reset()
 		}
-		s.db.Log.AppendEntry(req.Entry)
-		if req.LeaderCommit < s.commitIndex {
-			// Set commit index to the min of the leader's commit index and index of last new entry
-			if req.LeaderCommit < req.PrevLogIndex+1 {
-				s.commitIndex = req.LeaderCommit
-			} else {
-				s.commitIndex = req.PrevLogIndex + 1
+		if req.Entry.Command == "" {
+			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - got a heartbeat, responding true")
+			s.term = req.Term
+			s.state = "follower"
+			s.electionTimeout.reset()
+			resp := &appendEntryResponse{s.term, true}
+			returnChan <- *resp
+		} else {
+			if len(s.db.Log.Entries) > req.PrevLogIndex+2 {
+				if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
+					// If existing entry conflicts with new entry
+					// Delete entry and all that follow it
+					s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
+				}
 			}
+			s.db.Log.AppendEntry(req.Entry)
+			if req.LeaderCommit < s.commitIndex {
+				// Set commit index to the min of the leader's commit index and index of last new entry
+				if req.LeaderCommit < req.PrevLogIndex+1 {
+					s.commitIndex = req.LeaderCommit
+				} else {
+					s.commitIndex = req.PrevLogIndex + 1
+				}
+			}
+			resp := &appendEntryResponse{s.term, true}
+			returnChan <- *resp
 		}
-		resp := &appendEntryResponse{s.term, true}
-		returnChan <- *resp
 	}
 }
