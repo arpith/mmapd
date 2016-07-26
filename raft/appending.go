@@ -37,7 +37,7 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 	index := -1
 	if command != "" {
 		s.db.Log.AppendEntry(*entry)
-		index = len(s.db.Log.Entries)
+		index = len(s.db.Log.Entries) - 1
 	}
 	respChan := make(chan followerResponse)
 	for i := 0; i < len(s.config); i++ {
@@ -71,6 +71,7 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 			}
 			if s.commitIndex == index {
 				isCommitted <- true
+				return
 			}
 		}
 	} else {

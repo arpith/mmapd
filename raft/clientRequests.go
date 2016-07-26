@@ -34,6 +34,7 @@ func (s *server) handleWriteRequest(req writeRequest) {
 	c := make(chan bool)
 	go s.appendEntry(command, c)
 	<-c
+	close(c)
 	m := db.WriteChanMessage{key, value, req.returnChan}
 	s.db.WriteChan <- m
 }
