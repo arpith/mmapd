@@ -127,14 +127,23 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 	fmt.Println("Got append entry request: ", a.Req)
 	returnChan := a.ReturnChan
 	req := a.Req
-	if req.Term > s.term {
+	/*
+		if req.Term > s.term {
+			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
+			s.term = req.Term
+			s.state = "follower"
+			s.electionTimeout.reset()
+		}
+	*/
+	if req.Term < s.term {
+		resp := &appendEntryResponse{s.term, false}
+		returnChan <- *resp
+	} else if req.PrevLogIndex == -1 {
 		fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
 		s.term = req.Term
 		s.state = "follower"
 		s.electionTimeout.reset()
-	}
-	if req.Term < s.term {
-		resp := &appendEntryResponse{s.term, false}
+		resp := &appendEntryResponse{s.term, true}
 		returnChan <- *resp
 	} else if req.PrevLogIndex > -1 &&
 		len(s.db.Log.Entries) > req.PrevLogIndex &&
