@@ -105,10 +105,8 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 		}
 		defer resp.Body.Close()
 		if r.Term > s.term {
-			fmt.Println("SETTING FOLLOWER: got append entry RPC response with term greater than current term")
 			s.term = r.Term
-			s.state = "follower"
-			s.electionTimeout.reset()
+			s.stepDown("Got append entry RPC response with term > current term")
 		}
 		if r.Success {
 			s.term = r.Term
@@ -137,16 +135,13 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 		returnChan <- *resp
 	} else {
 		if req.Term > s.term {
-			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - append entries RPC has term greater than current term")
 			s.term = req.Term
-			s.state = "follower"
-			s.electionTimeout.reset()
+			s.stepDown("append entries RPC has term greater than current term")
 		}
 		if req.Entry.Command == "" {
-			fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT - got a heartbeat, responding true")
 			s.term = req.Term
-			s.state = "follower"
-			s.electionTimeout.reset()
+			s.stepDown("append entries RPC has term >= current term AND is a heartbeat")
+			fmt.Println("got a heartbeat, responding true: term >= current term")
 			resp := &appendEntryResponse{s.term, true}
 			returnChan <- *resp
 		} else {

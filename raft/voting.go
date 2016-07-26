@@ -29,6 +29,12 @@ type voteResponse struct {
 	Resp        requestForVoteResponse
 }
 
+func (s *server) stepDown(reason string) {
+	fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT: ", reason)
+	s.state = "follower"
+	s.electionTimeout.reset()
+}
+
 func (s *server) handleRequestForVote(v voteRequest) {
 	fmt.Println("Got vote request:", v.Req)
 	req := v.Req
@@ -38,11 +44,8 @@ func (s *server) handleRequestForVote(v voteRequest) {
 		returnChan <- *resp
 	} else {
 		if req.Term > s.term {
-			fmt.Println("SETTING FOLLOWER && RESETTING ELECTION TIMEOUT: Got vote request with term greater than current term")
-			fmt.Println("Request term: ", req.Term, " Current term: ", s.term)
-			s.state = "follower"
 			s.votedFor = ""
-			s.electionTimeout.reset()
+			s.stepDown("Got vote request with term > current term")
 		}
 		cond1 := s.votedFor == ""
 		cond2 := s.votedFor == req.CandidateID
