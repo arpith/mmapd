@@ -35,6 +35,16 @@ func (s *server) stepDown(reason string) {
 	s.electionTimeout.reset()
 }
 
+func (s *server) becomeLeader() {
+	//Initialize nextIndex values to the index after the last one in leader's log
+	for follower, _ := range s.nextIndex {
+		s.nextIndex[follower] = len(s.db.Log.Entries)
+	}
+	fmt.Println("SETTING LEADER: got majority vote")
+	s.state = "leader"
+	fmt.Println("IM THE LEADER :D :D :D :D :D ")
+}
+
 func (s *server) handleRequestForVote(v voteRequest) {
 	fmt.Println("Got vote request:", v.Req)
 	req := v.Req
@@ -114,9 +124,7 @@ func (s *server) startElection() {
 				voteCount++
 			}
 			if voteCount > (len(s.config)-1)/2 {
-				fmt.Println("SETTING LEADER: got majority vote")
-				s.state = "leader"
-				fmt.Println("IM THE LEADER :D :D :D :D :D ")
+				s.becomeLeader()
 				break
 			}
 			if responseCount == len(s.config)-2 {
