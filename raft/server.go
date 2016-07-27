@@ -34,7 +34,6 @@ func (s *server) listener() {
 			fmt.Println("Got vote request")
 			s.handleRequestForVote(v)
 		case e := <-s.appendRequests:
-			fmt.Println("Got append entry request")
 			s.handleAppendEntryRequest(e)
 		case r := <-s.readRequests:
 			s.handleReadRequest(r)
