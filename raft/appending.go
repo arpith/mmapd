@@ -83,7 +83,10 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 }
 
 func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respChan chan followerResponse) {
-	entry := s.db.Log.Entries[entryIndex]
+	entry := &db.Entry{"", s.term}
+	if entryIndex != -1 {
+		entry := s.db.Log.Entries[entryIndex]
+	}
 	follower := s.config[followerIndex]
 	prevLogIndex := entryIndex - 1
 	prevLogTerm := 0
