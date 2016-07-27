@@ -122,6 +122,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 			respChan <- *followerResp
 		} else {
 			s.nextIndex[followerIndex]--
+			fmt.Println(s.nextIndex[followerIndex], len(s.db.Log.Entries))
 			go s.sendAppendEntryRequest(followerIndex, s.nextIndex[followerIndex], respChan)
 		}
 	}
@@ -148,8 +149,6 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 			s.term = req.Term
 			s.stepDown("append entries RPC has term >= current term AND is a heartbeat")
 			fmt.Println("got a heartbeat, responding true: term >= current term")
-			resp := &appendEntryResponse{s.term, true}
-			returnChan <- *resp
 		} else {
 			if len(s.db.Log.Entries) > req.PrevLogIndex+2 {
 				if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
@@ -159,16 +158,16 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 				}
 			}
 			s.db.Log.AppendEntry(req.Entry)
-			if req.LeaderCommit > s.commitIndex {
-				// Set commit index to the min of the leader's commit index and index of last new entry
-				if req.LeaderCommit < req.PrevLogIndex+1 {
-					s.commitEntries(req.LeaderCommit)
-				} else {
-					s.commitEntries(req.PrevLogIndex + 1)
-				}
-			}
-			resp := &appendEntryResponse{s.term, true}
-			returnChan <- *resp
 		}
+		if req.LeaderCommit > s.commitIndex {
+			// Set commit index to the min of the leader's commit index and index of last new entry
+			if req.LeaderCommit < req.PrevLogIndex+1 {
+				s.commitEntries(req.LeaderCommit)
+			} else {
+				s.commitEntries(req.PrevLogIndex + 1)
+			}
+		}
+		resp := &appendEntryResponse{s.term, true}
+		returnChan <- *resp
 	}
 }
