@@ -11,6 +11,11 @@ func (s *server) commitEntries(leaderCommit int) {
 			fmt.Println("Can't commit an entry that's not in the log :)")
 			return
 		}
+		if i == -1 {
+			// s.commitIndex is initialised to -1
+			// Will commit on the next iteration
+			continue
+		}
 		entry := s.db.Log.Entries[i]
 		c := make(chan db.ReturnChanMessage)
 		m := db.WriteChanMessage{entry.Key, entry.Value, c}
