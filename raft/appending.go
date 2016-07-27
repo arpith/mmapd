@@ -159,12 +159,12 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 				}
 			}
 			s.db.Log.AppendEntry(req.Entry)
-			if req.LeaderCommit < s.commitIndex {
+			if req.LeaderCommit > s.commitIndex {
 				// Set commit index to the min of the leader's commit index and index of last new entry
 				if req.LeaderCommit < req.PrevLogIndex+1 {
-					s.commitIndex = req.LeaderCommit
+					s.commitEntries(req.LeaderCommit)
 				} else {
-					s.commitIndex = req.PrevLogIndex + 1
+					s.commitEntries(req.PrevLogIndex + 1)
 				}
 			}
 			resp := &appendEntryResponse{s.term, true}
