@@ -9,6 +9,8 @@ import (
 
 type Entry struct {
 	Command string
+	Key     string
+	Value   string
 	Term    int
 }
 

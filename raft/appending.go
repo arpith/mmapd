@@ -32,8 +32,8 @@ type followerResponse struct {
 	Resp        appendEntryResponse
 }
 
-func (s *server) appendEntry(command string, isCommitted chan bool) {
-	entry := &db.Entry{command, s.term}
+func (s *server) appendEntry(command string, key string, value string, isCommitted chan bool) {
+	entry := &db.Entry{command, key, value, s.term}
 	index := -1
 	if command != "" {
 		s.db.Log.AppendEntry(*entry)
@@ -83,7 +83,7 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 }
 
 func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respChan chan followerResponse) {
-	entryP := &db.Entry{"", s.term}
+	entryP := &db.Entry{"", "", "", s.term}
 	entry := *entryP
 	if entryIndex != -1 {
 		entry = s.db.Log.Entries[entryIndex]

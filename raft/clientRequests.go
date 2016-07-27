@@ -30,9 +30,9 @@ func (s *server) handleReadRequest(req readRequest) {
 func (s *server) handleWriteRequest(req writeRequest) {
 	key := req.key
 	value := req.value
-	command := "SET " + key + " " + value
+	command := "SET"
 	c := make(chan bool)
-	go s.appendEntry(command, c)
+	go s.appendEntry(command, key, value, c)
 	<-c
 	close(c)
 	m := db.WriteChanMessage{key, value, req.returnChan}

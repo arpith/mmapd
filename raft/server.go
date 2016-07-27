@@ -43,7 +43,7 @@ func (s *server) listener() {
 			if s.state == "leader" {
 				fmt.Println("Going to send heartbeats")
 				c := make(chan bool)
-				go s.appendEntry("", c)
+				go s.appendEntry("", "", "", c)
 			}
 		case <-s.electionTimeout.ticker:
 			if s.state != "leader" {
