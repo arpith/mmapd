@@ -42,7 +42,7 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 	respChan := make(chan followerResponse)
 	for i := 0; i < len(s.config); i++ {
 		if s.config[i] != s.id {
-			go s.sendAppendEntryRequest(i, *entry, respChan)
+			go s.sendAppendEntryRequest(i, index, respChan)
 		}
 	}
 	responseCount := 0
@@ -82,9 +82,10 @@ func (s *server) appendEntry(command string, isCommitted chan bool) {
 	}
 }
 
-func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respChan chan followerResponse) {
+func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respChan chan followerResponse) {
+	entry := s.db.Log.Entries[entryIndex]
 	follower := s.config[followerIndex]
-	prevLogIndex := len(s.db.Log.Entries) - 1
+	prevLogIndex := entryIndex - 1
 	prevLogTerm := 0
 	if prevLogIndex > 0 {
 		prevLogTerm = s.db.Log.Entries[prevLogIndex].Term
@@ -96,7 +97,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
 		fmt.Println(err)
-		go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+		go s.sendAppendEntryRequest(followerIndex, entryIndex, respChan)
 	} else {
 		r := &appendEntryResponse{}
 		err := json.NewDecoder(resp.Body).Decode(r)
@@ -117,7 +118,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entry db.Entry, respC
 			respChan <- *followerResp
 		} else {
 			s.nextIndex[followerIndex]--
-			go s.sendAppendEntryRequest(followerIndex, entry, respChan)
+			go s.sendAppendEntryRequest(followerIndex, s.nextIndex[followerIndex], respChan)
 		}
 	}
 }
