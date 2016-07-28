@@ -160,7 +160,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 }
 
 func (s *server) handleAppendEntryRequest(a appendRequest) {
-	fmt.Println("Append entry: ", a.Req.Entry)
+	fmt.Println("Append entry: ", a.Req)
 	returnChan := a.ReturnChan
 	req := a.Req
 	if req.Term < s.term {
