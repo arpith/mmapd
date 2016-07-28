@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"errors"
 	"fmt"
 	"github.com/arpith/mmapd/db"
 )
@@ -35,8 +36,13 @@ func (s *server) handleWriteRequest(req writeRequest) {
 	c := make(chan bool)
 	fmt.Println("GOT WRITE REQUEST!!!!")
 	go s.appendEntry(command, key, value, c)
-	<-c
+	isCommitted := <-c
 	close(c)
-	m := db.WriteChanMessage{key, value, req.returnChan}
-	s.db.WriteChan <- m
+	if isCommitted {
+		m := db.WriteChanMessage{key, value, req.returnChan}
+		s.db.WriteChan <- m
+	} else {
+		m := &db.ReturnChanMessage{errors.New("Couldn't Commit"), ""}
+		req.returnChan <- *m
+	}
 }

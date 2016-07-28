@@ -74,6 +74,10 @@ func (s *server) appendEntry(command string, key string, value string, isCommitt
 				isCommitted <- true
 				return
 			}
+			if responseCount == len(s.config)-1 {
+				isCommitted <- false
+				return
+			}
 		}
 	} else {
 		if command != "" {
@@ -113,7 +117,10 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 	if err != nil {
 		fmt.Println("Couldn't send append entry request to " + follower)
 		fmt.Println(err)
-		go s.sendAppendEntryRequest(followerIndex, entryIndex, respChan)
+		r := &appendEntryResponse{Success: false}
+		f := &followerResponse{followerIndex, *r}
+		respChan <- *f
+		//go s.sendAppendEntryRequest(followerIndex, entryIndex, respChan)
 	} else {
 		r := &appendEntryResponse{}
 		err := json.NewDecoder(resp.Body).Decode(r)
