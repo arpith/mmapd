@@ -6,6 +6,8 @@ import (
 )
 
 func (s *server) commitEntries(leaderCommit int) {
+	fmt.Println("GOING TO COMMIT STUFFFFFFF!!!!")
+	fmt.Println(s.commitIndex, leaderCommit)
 	for i := s.commitIndex; i <= leaderCommit; i++ {
 		if i > len(s.db.Log.Entries)-1 {
 			fmt.Println("Can't commit an entry that's not in the log :)")
@@ -26,6 +28,7 @@ func (s *server) commitEntries(leaderCommit int) {
 			fmt.Println(r.Err)
 			break
 		} else {
+			fmt.Println("COMMITTED SOMETHING!!!!")
 			s.commitIndex = i
 		}
 	}

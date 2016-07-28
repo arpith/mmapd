@@ -40,6 +40,7 @@ func (s *server) becomeLeader() {
 	for follower, _ := range s.nextIndex {
 		s.nextIndex[follower] = len(s.db.Log.Entries)
 	}
+	fmt.Println(s.nextIndex)
 	fmt.Println("SETTING LEADER: got majority vote")
 	s.state = "leader"
 	fmt.Println("IM THE LEADER :D :D :D :D :D ")

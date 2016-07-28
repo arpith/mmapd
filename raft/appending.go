@@ -85,15 +85,23 @@ func (s *server) appendEntry(command string, key string, value string, isCommitt
 func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respChan chan followerResponse) {
 	entryP := &db.Entry{"", "", "", s.term}
 	entry := *entryP
-	if entryIndex != -1 {
-		entry = s.db.Log.Entries[entryIndex]
-	}
 	follower := s.config[followerIndex]
-	prevLogIndex := entryIndex - 1
+	prevLogIndex := -1
 	prevLogTerm := 0
-	if prevLogIndex > 0 {
+	if entryIndex == -1 && len(s.db.Log.Entries)-1 > s.nextIndex[followerIndex] {
+		// When sending a heartbeat, if nextIndex < last log index, send the missing entry!
+		entryIndex = s.nextIndex[followerIndex]
+	}
+	if entryIndex > -1 {
+		if entryIndex < len(s.db.Log.Entries) {
+			entry = s.db.Log.Entries[entryIndex]
+		}
+		prevLogIndex = entryIndex - 1
+	}
+	if prevLogIndex > 0 && len(s.db.Log.Entries) > prevLogIndex {
 		prevLogTerm = s.db.Log.Entries[prevLogIndex].Term
 	}
+	fmt.Println("Going to send Append Entry RPC to ", follower, " for entry ", entry, " (prevLogIndex: ", prevLogIndex, " )")
 	a := &appendEntryRequest{s.term, s.id, prevLogIndex, prevLogTerm, entry, s.commitIndex}
 	b := new(bytes.Buffer)
 	json.NewEncoder(b).Encode(a)
@@ -121,7 +129,9 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 			followerResp := &followerResponse{followerIndex, *r}
 			respChan <- *followerResp
 		} else {
-			s.nextIndex[followerIndex]--
+			if s.nextIndex[followerIndex] > -1 {
+				s.nextIndex[followerIndex]--
+			}
 			fmt.Println(s.nextIndex[followerIndex], len(s.db.Log.Entries))
 			go s.sendAppendEntryRequest(followerIndex, s.nextIndex[followerIndex], respChan)
 		}
@@ -162,8 +172,10 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 		if req.LeaderCommit > s.commitIndex {
 			// Set commit index to the min of the leader's commit index and index of last new entry
 			if req.LeaderCommit < req.PrevLogIndex+1 {
+				fmt.Println("Going to commit entries with leader commit: ", req.LeaderCommit)
 				s.commitEntries(req.LeaderCommit)
 			} else {
+				fmt.Println("Going to commit entries with prevLogIndex: ", req.PrevLogIndex+1)
 				s.commitEntries(req.PrevLogIndex + 1)
 			}
 		}
