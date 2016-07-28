@@ -33,6 +33,7 @@ type followerResponse struct {
 }
 
 func (s *server) appendEntry(command string, key string, value string, isCommitted chan bool) {
+	fmt.Println("GOING TO APPEND ENTRY")
 	entry := &db.Entry{command, key, value, s.term}
 	index := -1
 	if command != "" {
@@ -88,6 +89,9 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 	follower := s.config[followerIndex]
 	prevLogIndex := -1
 	prevLogTerm := 0
+	if entryIndex == -1 {
+		fmt.Println(s.nextIndex)
+	}
 	if entryIndex == -1 && len(s.db.Log.Entries)-1 > s.nextIndex[followerIndex] {
 		// When sending a heartbeat, if nextIndex < last log index, send the missing entry!
 		entryIndex = s.nextIndex[followerIndex]
@@ -124,8 +128,10 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 		}
 		if r.Success {
 			s.term = r.Term
-			s.nextIndex[followerIndex]++
-			s.matchIndex[followerIndex]++
+			if entryIndex != -1 {
+				s.nextIndex[followerIndex]++
+				s.matchIndex[followerIndex]++
+			}
 			followerResp := &followerResponse{followerIndex, *r}
 			respChan <- *followerResp
 		} else {
@@ -140,6 +146,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 
 func (s *server) handleAppendEntryRequest(a appendRequest) {
 	fmt.Println("Got append entry request: ", a.Req)
+	fmt.Println("Append entry: ", a.Req.Entry)
 	returnChan := a.ReturnChan
 	req := a.Req
 	if req.Term < s.term {
@@ -175,7 +182,7 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 				fmt.Println("Going to commit entries with leader commit: ", req.LeaderCommit)
 				s.commitEntries(req.LeaderCommit)
 			} else {
-				fmt.Println("Going to commit entries with prevLogIndex: ", req.PrevLogIndex+1)
+				fmt.Println("Going to commit entries with prevLogIndex: ", req.PrevLogIndex)
 				s.commitEntries(req.PrevLogIndex + 1)
 			}
 		}
