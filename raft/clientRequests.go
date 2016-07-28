@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"github.com/arpith/mmapd/db"
 )
 
@@ -32,6 +33,7 @@ func (s *server) handleWriteRequest(req writeRequest) {
 	value := req.value
 	command := "SET"
 	c := make(chan bool)
+	fmt.Println("GOT WRITE REQUEST!!!!")
 	go s.appendEntry(command, key, value, c)
 	<-c
 	close(c)
