@@ -97,7 +97,7 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 			respChan <- *v
 			return
 		}
-		defer resp.Body.Close()
+		resp.Body.Close()
 		voteResp := &voteResponse{receiverIndex, *r}
 		respChan <- *voteResp
 	}
