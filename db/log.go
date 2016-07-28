@@ -104,5 +104,6 @@ func initLog(filename string) *Log {
 		log.resize(size)
 	}
 	log.mmap(size)
+	log.load()
 	return log
 }
