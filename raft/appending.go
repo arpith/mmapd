@@ -98,7 +98,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 		}
 		prevLogIndex = entryIndex - 1
 	}
-	if prevLogIndex > 0 && len(s.db.Log.Entries) > prevLogIndex {
+	if prevLogIndex >= 0 && len(s.db.Log.Entries) > prevLogIndex {
 		prevLogTerm = s.db.Log.Entries[prevLogIndex].Term
 	}
 	fmt.Println("Going to send Append Entry RPC to ", follower, " for entry ", entry, " (prevLogIndex: ", prevLogIndex, " )")
@@ -117,7 +117,7 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 			fmt.Println("Couldn't decode append entries response from " + s.config[followerIndex])
 			return
 		}
-		defer resp.Body.Close()
+		resp.Body.Close()
 		if r.Term > s.term {
 			s.term = r.Term
 			s.stepDown("Got append entry RPC response with term > current term")
