@@ -178,7 +178,7 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 		}
 		if req.LeaderCommit > s.commitIndex {
 			// Set commit index to the min of the leader's commit index and index of last new entry
-			if req.LeaderCommit < req.PrevLogIndex+1 {
+			if req.Entry.Command == "" || req.LeaderCommit < req.PrevLogIndex+1 {
 				fmt.Println("Going to commit entries with leader commit: ", req.LeaderCommit)
 				s.commitEntries(req.LeaderCommit)
 			} else {
