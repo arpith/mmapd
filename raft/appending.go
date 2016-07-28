@@ -33,7 +33,6 @@ type followerResponse struct {
 }
 
 func (s *server) appendEntry(command string, key string, value string, isCommitted chan bool) {
-	fmt.Println("GOING TO APPEND ENTRY")
 	entry := &db.Entry{command, key, value, s.term}
 	index := -1
 	if command != "" {
@@ -44,6 +43,12 @@ func (s *server) appendEntry(command string, key string, value string, isCommitt
 	for i := 0; i < len(s.config); i++ {
 		if s.config[i] != s.id {
 			go s.sendAppendEntryRequest(i, index, respChan)
+		} else {
+			if command != "" {
+				//Update nextIndex and matchIndex for self
+				s.nextIndex[i]++
+				s.matchIndex[i]++
+			}
 		}
 	}
 	responseCount := 0
@@ -75,8 +80,11 @@ func (s *server) appendEntry(command string, key string, value string, isCommitt
 				return
 			}
 			if responseCount == len(s.config)-1 {
-				isCommitted <- false
-				return
+				fmt.Println("Got all responses!")
+				/*
+						isCommitted <- false
+					return
+				*/
 			}
 		}
 	} else {
@@ -152,7 +160,6 @@ func (s *server) sendAppendEntryRequest(followerIndex int, entryIndex int, respC
 }
 
 func (s *server) handleAppendEntryRequest(a appendRequest) {
-	fmt.Println("Got append entry request: ", a.Req)
 	fmt.Println("Append entry: ", a.Req.Entry)
 	returnChan := a.ReturnChan
 	req := a.Req
