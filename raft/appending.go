@@ -185,7 +185,7 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 				if s.db.Log.Entries[req.PrevLogIndex+1].Term != req.Term {
 					// If existing entry conflicts with new entry
 					// Delete entry and all that follow it
-					s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex])
+					s.db.Log.SetEntries(s.db.Log.Entries[:req.PrevLogIndex+1])
 				}
 			}
 			s.db.Log.AppendEntry(req.Entry)
