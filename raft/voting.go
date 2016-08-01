@@ -121,6 +121,10 @@ func (s *server) startElection() {
 			vote := <-respChan
 			responseCount++
 			fmt.Println("Got vote response", vote)
+			if vote.Resp.Term > s.term {
+				s.stepDown("Got vote response with term greater than current term")
+				break
+			}
 			if vote.Resp.HasGrantedVote {
 				voteCount++
 			}
