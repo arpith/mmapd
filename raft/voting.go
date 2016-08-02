@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type requestForVote struct {
@@ -30,7 +31,8 @@ type voteResponse struct {
 }
 
 func (s *server) stepDown(reason string) {
-	fmt.Println("SETTING FOLLOWER & RESETTING ELECTION TIMEOUT: ", reason)
+	t := time.Now()
+	fmt.Println(t.Format("15:04:05.999999"), "SETTING FOLLOWER & RESETTING ELECTION TIMEOUT: ", reason)
 	s.state = "follower"
 	s.electionTimeout.reset()
 }
@@ -104,7 +106,8 @@ func (s *server) sendRequestForVote(receiverIndex int, respChan chan voteRespons
 }
 
 func (s *server) startElection() {
-	fmt.Println("SETTING CANDIDATE: Going to start election")
+	t := time.Now()
+	fmt.Println(t.Format("15:04:05.999999"), "SETTING CANDIDATE: Going to start election")
 	s.state = "candidate"
 	s.term += 1
 	s.votedFor = s.id
