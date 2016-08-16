@@ -164,11 +164,13 @@ func (s *server) handleAppendEntryRequest(a appendRequest) {
 	returnChan := a.ReturnChan
 	req := a.Req
 	if req.Term < s.term {
+		fmt.Println("append entry RPC has term < current term, responding false")
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else if req.PrevLogIndex > -1 &&
 		len(s.db.Log.Entries) > req.PrevLogIndex &&
 		s.db.Log.Entries[req.PrevLogIndex].Term != req.PrevLogTerm {
+		fmt.Println("responding false to append entry RPC: prev log term clash")
 		resp := &appendEntryResponse{s.term, false}
 		returnChan <- *resp
 	} else {
