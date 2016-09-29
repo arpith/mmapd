@@ -9,15 +9,16 @@ import (
 
 type timeout struct {
 	period time.Duration
-	ticker <-chan time.Time
+	ticker time.Ticker
 }
 
 func (t *timeout) reset() {
-	t.ticker = time.Tick(t.period)
+	t.ticker.Stop()
+	t.ticker = *time.NewTicker(t.period)
 }
 
 func createTimeout(period time.Duration) *timeout {
-	return &timeout{period, time.Tick(period)}
+	return &timeout{period, *time.NewTicker(period)}
 }
 
 func generateRandomInt(lower int, upper int) int {

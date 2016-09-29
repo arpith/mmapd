@@ -39,13 +39,13 @@ func (s *server) listener() {
 			s.handleReadRequest(r)
 		case w := <-s.writeRequests:
 			s.handleWriteRequest(w)
-		case <-s.heartbeatTimeout.ticker:
+		case <-s.heartbeatTimeout.ticker.C:
 			if s.state == "leader" {
 				fmt.Println("Going to send heartbeats")
 				c := make(chan bool)
 				go s.appendEntry("", "", "", c)
 			}
-		case <-s.electionTimeout.ticker:
+		case <-s.electionTimeout.ticker.C:
 			if s.state != "leader" {
 				fmt.Println("Going to start election")
 				go s.startElection()
